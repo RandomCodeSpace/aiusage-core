@@ -1,0 +1,30 @@
+{
+  "id": "msg_0968ec09f001UrEgRvui4lYkns",
+  "sessionID": "ses_f6971461fffeDLctuzpLpyhs6L",
+  "role": "assistant",
+  "time": {
+    "created": 1789232332959,
+    "completed": 1789232333627
+  },
+  "parentID": "msg_0968eba190015J9QnzTTabgnYF",
+  "modelID": "gemma4:31b-cloud",
+  "providerID": "capture",
+  "mode": "build",
+  "agent": "build",
+  "path": {
+    "cwd": "/sample/project",
+    "root": "/"
+  },
+  "cost": 0,
+  "tokens": {
+    "total": 2837,
+    "input": 143,
+    "output": 6,
+    "reasoning": 0,
+    "cache": {
+      "read": 2688,
+      "write": 0
+    }
+  },
+  "finish": "stop"
+}

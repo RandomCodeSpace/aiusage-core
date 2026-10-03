@@ -1,0 +1,6 @@
+{"type":"session","version":3,"id":"01a008e0-0000-7000-8000-000000000001","timestamp":"2026-08-16T05:00:00.000Z","cwd":"/home/example/my-lab/pi"}
+{"type":"model_change","id":"aa000001","parentId":null,"timestamp":"2026-08-16T05:00:00.100Z","provider":"anthropic","modelId":"claude-sonnet-4-5"}
+{"type":"thinking_level_change","id":"aa000002","parentId":"aa000001","timestamp":"2026-08-16T05:00:00.100Z","thinkingLevel":"off"}
+{"type":"compaction","id":"aa000003","parentId":"aa000002","timestamp":"2026-08-16T05:00:01.000Z","summary":"<scrubbed compaction summary>","firstKeptEntryId":"aa000002","tokensBefore":120000,"usage":{"input":900,"output":300,"cacheRead":100,"cacheWrite":50,"reasoning":40,"totalTokens":1350,"cost":{"input":0.0027,"output":0.0045,"cacheRead":0.00003,"cacheWrite":0.0001875,"total":0.0073175}}}
+{"type":"branch_summary","id":"aa000004","parentId":"aa000003","timestamp":"2026-08-16T05:00:02.000Z","fromId":"aa000002","summary":"<scrubbed branch summary>","usage":{"input":10,"output":5,"cacheRead":0,"cacheWrite":0,"totalTokens":15,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}}}
+{"type":"label","id":"aa000005","parentId":"aa000004","timestamp":"2026-08-16T05:00:03.000Z","targetId":"aa000003","label":"before-compaction"}

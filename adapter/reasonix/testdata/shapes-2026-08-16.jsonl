@@ -1,0 +1,8 @@
+{"ts":"2026-08-15T22:30:00.000000001Z","model":"deepseek/deepseek-reasoner","source":"cli","prompt":1000,"completion":300,"reasoning":220,"cache_hit":640,"cache_miss":360,"total":1300,"requests":1,"turns":2,"usage_source":"executor","cost_complete":true,"display_complete":true,"display_status":"available","cost_estimated":false}
+{"ts":"2026-08-16T01:00:00Z","model":"ollama/qwen3.5:cloud","source":"web","prompt":500,"completion":50,"cache_hit":100,"cache_miss":999,"total":550,"requests":1}
+{"ts":"2026-08-16T02:00:00Z","model":"bare-model","source":"acp","prompt":10,"completion":5,"cache_hit":99,"total":15,"requests":1}
+{"ts":"2026-08-16T03:00:00Z","model":"x/y","source":"cli","prompt":7,"completion":3,"requests":1}
+{"ts":"2026-08-16T03:30:00Z","model":"x/y","source":"cli","prompt":0,"completion":0,"total":0,"requests":0}
+
+{"ts":"2026-08-16T03:45:00Z","model":"x/y","source":"cli","prompt":
+{"ts":"2026-08-16T04:00:00Z","model":"x/y","source":"cli","prompt":-5,"completion":9,"total":-1,"requests":1}

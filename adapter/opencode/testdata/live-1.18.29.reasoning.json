@@ -1,0 +1,104 @@
+{
+  "evidence_kind": "exact installed writer code plus labeled constructed edge",
+  "writer_version": "1.18.29",
+  "writer_elf_sha256": "ca6c0e1f42be3120595bf6848937e7586ec862c87fa7aa111e89c7cc6e9a4650",
+  "version_binding": "The same executable reported --version 1.18.29 before the existing capture, and its full hash remained unchanged through this source extraction.",
+  "source_binding": "Excerpts are exact byte substrings of that ELF, not an inferred upstream tag or commit.",
+  "embedded_call_binding": {
+    "processor_import": "Rr as _ from /$bunfs/root/chunk-mpv1mxe7.js",
+    "session_export": "B8 as Rr",
+    "session_namespace": "getUsage:()=>SQ",
+    "implementation": "SQ",
+    "write_path": "processor assigns Session.getUsage result tokens to assistantMessage.tokens and calls updateMessage"
+  },
+  "upstream_commit_or_tag_mapping": "not asserted",
+  "sources": [
+    {
+      "file": "session-get-usage.js",
+      "elf_byte_offset": 98494267,
+      "bytes": 1203,
+      "sha256": "2e5179fb2074b117df3671230ed7e085a60968f44ff758b0df39bedbd9eef4c8"
+    },
+    {
+      "file": "session-namespace.js",
+      "elf_byte_offset": 98417075,
+      "bytes": 500,
+      "sha256": "698263211bbdb2cb338fe92b62aac0c25907cead65c5dc802276b11f64342ca9"
+    },
+    {
+      "file": "session-exports.js",
+      "elf_byte_offset": 98505534,
+      "bytes": 349,
+      "sha256": "9019b23b97525b2071a5f1717c0d8d7683a3cf4c97b4bfee05c0eb0f29949447"
+    },
+    {
+      "file": "processor-session-import.js",
+      "elf_byte_offset": 96656148,
+      "bytes": 114,
+      "sha256": "dc0af5c8696c205f576d109b2f9e0e26d4cd30a257f0c028a4a47e228041fd80"
+    },
+    {
+      "file": "processor-usage-write.js",
+      "elf_byte_offset": 96822312,
+      "bytes": 418,
+      "sha256": "bab1a58fb237087f495520ac65004ba621beae28a4898f66b256991bf768b7d7"
+    }
+  ],
+  "semantics": {
+    "reasoning": "nonnegative finite usage.reasoningTokens, or zero when absent",
+    "output": "nonnegative finite usage.outputTokens minus reasoning, floored at zero",
+    "input": "nonnegative finite usage.inputTokens minus cache read and cache write, floored at zero",
+    "total": "usage.totalTokens is retained",
+    "accounting": "stored reasoning is additive to stored output; it must not be copied into output by total fallback"
+  },
+  "constructed_vectors": {
+    "label": "constructed SDK usage inputs and exact embedded-writer token outputs, not live events",
+    "inputs": [
+      {
+        "inputTokens": 120,
+        "outputTokens": 50,
+        "reasoningTokens": 20,
+        "cacheReadInputTokens": 30,
+        "cacheWriteInputTokens": 10,
+        "totalTokens": 170
+      },
+      {
+        "inputTokens": 120,
+        "outputTokens": 30,
+        "reasoningTokens": 30,
+        "cacheReadInputTokens": 30,
+        "cacheWriteInputTokens": 10,
+        "totalTokens": 150
+      }
+    ],
+    "outputs": [
+      {
+        "total": 170,
+        "input": 80,
+        "output": 30,
+        "reasoning": 20,
+        "cache": {
+          "write": 10,
+          "read": 30
+        }
+      },
+      {
+        "total": 150,
+        "input": 80,
+        "output": 0,
+        "reasoning": 30,
+        "cache": {
+          "write": 10,
+          "read": 30
+        }
+      }
+    ]
+  },
+  "constructed_test": "TestWriter11829ConstructedReasoningOnly",
+  "limits": [
+    "This is exact writer-code evidence and a constructed edge, not a new live nonzero-reasoning event.",
+    "The existing current live capture retains reasoning 0/0 and its documented workspace-isolation limit.",
+    "Historical nonzero reasoning retains its weaker embedded-session-version provenance.",
+    "No native JSON fallback surface was captured or constructed as live evidence."
+  ]
+}

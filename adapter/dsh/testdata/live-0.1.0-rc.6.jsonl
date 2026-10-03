@@ -1,0 +1,7 @@
+{"createdAt":1789230046643,"cwd":"/sample/project","delegationDepth":0,"id":"session-84c6a0b8-df1d-4a42-8fac-4ee54bcf4a2e","type":"session","version":0}
+{"data":{"model":"gemma4:31b-cloud","provider":"ollama-local"},"seq":11,"time":1789230046684,"type":"request/context"}
+{"data":{"chunk":{"type":"usage","usage":{"inputTokens":1155,"outputTokens":17}},"step":1,"turn":1},"seq":15,"time":1789230047411,"type":"assistant/chunk"}
+{"data":{"message":{"id":"858ae9ba-fa62-42f1-8eb8-e4415f0ecbc9","source":{"model":"gemma4:31b-cloud","provider":"ollama-local","replayState":{"responseId":"chatcmpl-297","responseModel":"gemma4:31b"}}},"step":1,"turn":1,"usage":{"inputTokens":1155,"outputTokens":17}},"seq":17,"sourceEventSeqs":[12,13,14,15,16],"time":1789230047413,"type":"assistant/message"}
+{"data":{"callId":"call_x89kcb1t","name":"read","step":1,"turn":1},"seq":18,"time":1789230047415,"type":"tool/call"}
+{"data":{"chunk":{"type":"usage","usage":{"cacheReadTokens":1120,"inputTokens":124,"outputTokens":7}},"step":2,"turn":1},"seq":26,"time":1789230048001,"type":"assistant/chunk"}
+{"data":{"message":{"id":"10f3eecd-50d3-4fa9-bd3c-cd6fb13f6e00","source":{"model":"gemma4:31b-cloud","provider":"ollama-local","replayState":{"responseId":"chatcmpl-510","responseModel":"gemma4:31b"}}},"step":2,"turn":1,"usage":{"cacheReadTokens":1120,"inputTokens":124,"outputTokens":7}},"seq":28,"sourceEventSeqs":[22,23,24,25,26,27],"time":1789230048002,"type":"assistant/message"}

@@ -1,0 +1,25 @@
+{
+  "id": "prt_0968ec04a0018TMQouqpOhKLzf",
+  "sessionID": "ses_f6971461fffeDLctuzpLpyhs6L",
+  "messageID": "msg_0968eba98001rMDB7c7S5bO7or",
+  "type": "tool",
+  "callID": "call_hjsma31k",
+  "tool": "read",
+  "state": {
+    "status": "completed",
+    "input": {
+      "filePath": "/sample/project/fixture.txt"
+    },
+    "output": "[sanitized read output]",
+    "title": "fixture.txt",
+    "metadata": {
+      "preview": "[sanitized read preview]",
+      "truncated": false,
+      "loaded": []
+    },
+    "time": {
+      "start": 1789232332877,
+      "end": 1789232332888
+    }
+  }
+}

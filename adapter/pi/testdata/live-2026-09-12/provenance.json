@@ -1,0 +1,201 @@
+{
+  "capture_date": "2026-09-12",
+  "os": "Linux",
+  "architecture": "x86_64",
+  "sanitization": "Original stable IDs, timestamps, types, model/provider/API names, tool names, usage/cost counters and call structure retained. Project and parent paths replaced; all prompt, response, thinking, argument, tool result and extension data replaced by a planted canary.",
+  "packs": {
+    "pi": {
+      "writer_version": "0.84.2",
+      "turns": [
+        {
+          "start_utc": "2026-09-12T16:05:02.538017+00:00",
+          "end_utc": "2026-09-12T16:05:05.764881+00:00",
+          "status": 0,
+          "session_count": 1,
+          "usage_rows": 2,
+          "positive_usage_rows": 2,
+          "tool_calls": 1,
+          "source_hashes": [
+            "de5f85152b1ba026ce5cf1c3fda333fdd3c762e9393a3a2c14e3eafa30f8a34d"
+          ]
+        },
+        {
+          "start_utc": "2026-09-12T16:06:28.084789+00:00",
+          "end_utc": "2026-09-12T16:06:30.105847+00:00",
+          "status": 0,
+          "session_count": 2,
+          "sources": [
+            {
+              "usage_rows": 2,
+              "tool_calls": 1,
+              "sha256": "de5f85152b1ba026ce5cf1c3fda333fdd3c762e9393a3a2c14e3eafa30f8a34d"
+            },
+            {
+              "usage_rows": 4,
+              "tool_calls": 2,
+              "sha256": "ebc325ed6e1d208e6f9062ec0953d89ca7359f7513fbbf35ee1e8df5a9a4d29f"
+            }
+          ],
+          "original_frozen_unchanged": true
+        }
+      ],
+      "fixtures": {
+        "pi-before.jsonl": "1488ba62b5c50fa505bcc9f34729a17a746934fa78e1b2ab09a3d40de070d6a5",
+        "pi-after-fork.jsonl": "149591d867d4d45545d3d3bc3c82938e73db9247d46b55b5b5ac62d04362b87c"
+      },
+      "source_sha256": {
+        "pi-before.jsonl": "de5f85152b1ba026ce5cf1c3fda333fdd3c762e9393a3a2c14e3eafa30f8a34d",
+        "pi-after-fork.jsonl": "ebc325ed6e1d208e6f9062ec0953d89ca7359f7513fbbf35ee1e8df5a9a4d29f"
+      },
+      "required_anchors": [
+        "type=session",
+        "id",
+        "timestamp",
+        "cwd",
+        "message.usage"
+      ],
+      "reasoning": "All live Pi reasoning counters are explicitly zero; exact writer type and API mapping prove subset behavior.",
+      "executed_cli_sha256": "840d1e8e689ed9e4937bcb00b9a810e02a8567d9afb10a47097f11ca93ea1521",
+      "package_json_sha256": "820f4adc6d61f2cefbc29ce17e9dfd9aa482248d54be5d0dfa2a868ca000c7b0"
+    },
+    "openclaw": {
+      "writer_version": "2026.7.1-2 (0790d9f)",
+      "turns": [
+        {
+          "start_utc": "2026-09-12T16:07:12.129949+00:00",
+          "end_utc": "2026-09-12T16:07:25.190633+00:00",
+          "status": 0,
+          "session_files": 2,
+          "sources": [
+            {
+              "sidecar": true,
+              "usage_rows": 0,
+              "tool_calls": 0,
+              "sha256": "c9247372e9597d1558435787a7c549c0dab3e7af1eae681eca33600550233acf"
+            },
+            {
+              "sidecar": false,
+              "usage_rows": 2,
+              "tool_calls": 1,
+              "sha256": "a73f89256133be4a6af22c04c8b379d3e1f9f0403c5aa8472d8cc317105837f1"
+            }
+          ]
+        },
+        {
+          "start_utc": "2026-09-12T16:08:12.339521+00:00",
+          "end_utc": "2026-09-12T16:08:25.760564+00:00",
+          "status": 0,
+          "session_files": 2,
+          "sources": [
+            {
+              "sidecar": true,
+              "usage_rows": 0,
+              "tool_calls": 0,
+              "sha256": "3a7771a43fade83a1bfa9a14fffaefc347bd1ebb4a44513aad36306a9aeb707b"
+            },
+            {
+              "sidecar": false,
+              "usage_rows": 4,
+              "tool_calls": 2,
+              "sha256": "b1feef4d083eaf30892bd56ee4a6533661ec69b9eb88c57eaa837af41f655965"
+            }
+          ]
+        }
+      ],
+      "fixtures": {
+        "openclaw-before.jsonl": "2642219a0e10675b49a183e7c651a4f4e4e7a10ccef5789aa95f4702954330b5",
+        "openclaw-after.jsonl": "4006d0fb9a12cd7d562249e519486e9ca2b7ca338db9c349012a930be5b4a52b",
+        "openclaw-sidecar-before.trajectory.jsonl": "26762564fedee4da72828e4bd274e10923e8b715665c5b6150957f83c209cc43",
+        "openclaw-sidecar-after.trajectory.jsonl": "b1db34d71f0ce11956928d3bd05c386900261600fbc190978156aa40d17fc1e3"
+      },
+      "source_sha256": {
+        "openclaw-before.jsonl": "a73f89256133be4a6af22c04c8b379d3e1f9f0403c5aa8472d8cc317105837f1",
+        "openclaw-after.jsonl": "b1feef4d083eaf30892bd56ee4a6533661ec69b9eb88c57eaa837af41f655965",
+        "openclaw-sidecar-before.jsonl": "c9247372e9597d1558435787a7c549c0dab3e7af1eae681eca33600550233acf",
+        "openclaw-sidecar-after.jsonl": "3a7771a43fade83a1bfa9a14fffaefc347bd1ebb4a44513aad36306a9aeb707b"
+      },
+      "required_anchors": [
+        "type=session",
+        "id",
+        "timestamp",
+        "cwd",
+        "message.usage"
+      ],
+      "reasoning": "Selected Ollama writer emits no reasoning field; exact writer shows absent breakdown. Same exact OpenClaw build maps OpenAI reasoningTokens as an output subset. The constructed nonzero edge uses that exact spelling, separately from Pi reasoning. Existing reasoning takes precedence if both spellings occur; they are never added. Existing source dedup keys retain the prior reasoning component so correcting the alias cannot recount billed tokens. Historical stored reasoning is not backfilled.",
+      "executed_cli_sha256": "f643b005d6db233a0b45204e8d8e943256874ccc6897b8a6e0cf42a9b376a188",
+      "package_json_sha256": "695b6ee36df7fc69606dc390cf97bb2ca809114337b18c573707637cd2a4e3db"
+    }
+  },
+  "writer_proof": [
+    {
+      "label": "Pi usage type",
+      "installed_package_relative_path": "node_modules/@earendil-works/pi-ai/dist/types.d.ts",
+      "sha256": "9f954629e7cca259965ffe8937a3491abe66e1ad7594832055028e07bf33a1b9",
+      "excerpts": [
+        {
+          "start_line": 255,
+          "end_line": 268,
+          "source": "export interface Usage {\n    input: number;\n    output: number;\n    cacheRead: number;\n    cacheWrite: number;\n    /** Subset of `cacheWrite` written with 1h retention. Only Anthropic reports this split. */\n    cacheWrite1h?: number;\n    /**\n     * Reasoning/thinking tokens, when the provider reports them. This is a subset of\n     * `output`: `output` already includes these tokens. Set to a number (possibly 0) by\n     * providers that expose a reasoning breakdown; left undefined by providers that don't.\n     */\n    reasoning?: number;\n    totalTokens: number;"
+        }
+      ]
+    },
+    {
+      "label": "Pi OpenAI counter mapping",
+      "installed_package_relative_path": "node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js",
+      "sha256": "45fc45d3b761fc97701982f5326e54199f8d8b7e85d6a162ee33a781311c5526",
+      "excerpts": [
+        {
+          "start_line": 1107,
+          "end_line": 1129,
+          "source": "    const promptTokens = rawUsage.prompt_tokens || 0;\n    const cacheReadTokens = rawUsage.prompt_tokens_details?.cached_tokens ?? rawUsage.prompt_cache_hit_tokens ?? 0;\n    const cacheWriteTokens = rawUsage.prompt_tokens_details?.cache_write_tokens || 0;\n    // Follow documented OpenAI/OpenRouter semantics: cached_tokens is cache-read\n    // tokens (hits). OpenAI does not document or emit cache_write_tokens, but\n    // OpenRouter-compatible providers can include it as a separate write count.\n    // OpenRouter's own provider/tests affirm the separate mapping:\n    // https://github.com/OpenRouterTeam/ai-sdk-provider/pull/409\n    // Do not subtract writes from cached_tokens, otherwise spec-compliant\n    // providers are under-reported. DS4 mirrors this contract too:\n    // https://github.com/antirez/ds4/pull/29\n    const input = Math.max(0, promptTokens - cacheReadTokens - cacheWriteTokens);\n    // OpenAI completion_tokens already includes reasoning_tokens.\n    const outputTokens = rawUsage.completion_tokens || 0;\n    const usage = {\n        input,\n        output: outputTokens,\n        cacheRead: cacheReadTokens,\n        cacheWrite: cacheWriteTokens,\n        reasoning: rawUsage.completion_tokens_details?.reasoning_tokens || 0,\n        totalTokens: input + outputTokens + cacheReadTokens + cacheWriteTokens,\n        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },\n    };"
+        }
+      ]
+    },
+    {
+      "label": "OpenClaw Ollama usage builder",
+      "installed_package_relative_path": "dist/stream-DwcvMYU5.js",
+      "sha256": "1dfa51f5d1e812f0f4bb9474e0114625154d67ede7d9aa7f89550709e535717f",
+      "excerpts": [
+        {
+          "start_line": 382,
+          "end_line": 401,
+          "source": "const CHARS_PER_TOKEN_ESTIMATE = 4;\nfunction buildUsageWithNoCost(params) {\n\tconst input = params.input ?? 0;\n\tconst output = params.output ?? 0;\n\treturn {\n\t\tinput,\n\t\toutput,\n\t\tcacheRead: params.cacheRead ?? 0,\n\t\tcacheWrite: params.cacheWrite ?? 0,\n\t\ttotalTokens: params.totalTokens ?? input + output,\n\t\tcost: {\n\t\t\tinput: 0,\n\t\t\toutput: 0,\n\t\t\tcacheRead: 0,\n\t\t\tcacheWrite: 0,\n\t\t\ttotal: 0\n\t\t}\n\t};\n}\nfunction buildStreamAssistantMessage(params) {"
+        },
+        {
+          "start_line": 649,
+          "end_line": 658,
+          "source": "\t});\n\treturn buildStreamAssistantMessage({\n\t\tmodel: modelInfo,\n\t\tcontent,\n\t\tstopReason: resolveOllamaStopReason(response),\n\t\tusage: buildUsageWithNoCost({\n\t\t\tinput: resolveUsageCount(response.prompt_eval_count, usageFallback?.input),\n\t\t\toutput: resolveUsageCount(response.eval_count, usageFallback?.output)\n\t\t})\n\t});"
+        }
+      ]
+    },
+    {
+      "label": "OpenClaw OpenAI subset mapping",
+      "installed_package_relative_path": "dist/openai-transport-stream-B0WkSqXp.js",
+      "sha256": "82712e39d2863f055210df3a33f4a725872bcbf3dfef1b7ba181dba882f60edc",
+      "excerpts": [
+        {
+          "start_line": 3493,
+          "end_line": 3515,
+          "source": "function parseTransportChunkUsage(rawUsage, model) {\n\tconst cachedTokens = rawUsage.prompt_tokens_details?.cached_tokens || 0;\n\tconst promptTokens = rawUsage.prompt_tokens || 0;\n\tconst input = Math.max(0, promptTokens - cachedTokens);\n\tconst outputTokens = rawUsage.completion_tokens || 0;\n\tconst reasoningTokens = rawUsage.completion_tokens_details?.reasoning_tokens;\n\tconst usage = {\n\t\tinput,\n\t\toutput: outputTokens,\n\t\tcacheRead: cachedTokens,\n\t\tcacheWrite: 0,\n\t\t...typeof reasoningTokens === \"number\" && Number.isFinite(reasoningTokens) ? { reasoningTokens } : {},\n\t\ttotalTokens: input + outputTokens + cachedTokens,\n\t\tcost: {\n\t\t\tinput: 0,\n\t\t\toutput: 0,\n\t\t\tcacheRead: 0,\n\t\t\tcacheWrite: 0,\n\t\t\ttotal: 0\n\t\t}\n\t};\n\tcalculateCost(model, usage);\n\tapplyProviderReportedUsageCost(usage, rawUsage.cost);"
+        }
+      ]
+    }
+  ],
+  "recipes": {
+    "pi": "Use existing sole ollama/gemma4:31b-cloud config copied into private temporary PI_CODING_AGENT_DIR; separate session directory and empty cwd with one sample file. PI_TELEMETRY=0; --offline --no-extensions --no-skills --no-prompt-templates --no-context-files --no-themes --no-approve --tools read --print --mode json, bounded custom system prompt; one read turn, then --fork of that exact temporary session and a second read turn. Each process has 55 second wall timeout.",
+    "openclaw": "Copy existing configured ollama-cloud/gemma4:31b selection into private temporary OPENCLAW_CONFIG_PATH/STATE_DIR/AGENT_DIR; keep existing OLLAMA_API_KEY in process environment, no credential value copied to fixtures. New agent/workspace and UUID session; skipBootstrap true, skills empty, tools.allow=[read], plugins.allow=[ollama]. agent --local --json --agent capture --session-id <new UUID> --timeout 45 --message-file <temporary prompt> twice; 55 second process timeout. No deliver, channel, reply target or existing session used."
+  },
+  "verification": {
+    "pi_original_config_hashes_unchanged": true,
+    "all_frozen_source_hashes_unchanged": true,
+    "private_raw_vs_sanitized_counters": "passed; exact stable usage keys, message/session IDs, token/cost/model/provider/time parity, 4 usage rows and 2 exact read-call joins per final pack",
+    "scratch_store_replay": "passed for raw and sanitized captures; initial 2 usage/1 activity, repeat 0/0, real delta inserts 2/1, final replay 0/0, idle 0/0, context always 0",
+    "owning_package": "GOTOOLCHAIN=go1.25.13 CGO_ENABLED=0 go test ./adapter/pi -count=1",
+    "required_anchor_cases": 96,
+    "source_read_only": "temporary collection inputs hashed before/after; unchanged",
+    "reasoning_evidence": "Live zero/absent is retained; constructed nonzero subset test is separate and linked to exact writer proof.",
+    "pack_status": "Integrator review and manifest update pending"
+  },
+  "goos": "linux",
+  "goarch": "amd64"
+}

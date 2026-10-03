@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-16T05:00:00.000Z",
+  "sessionId": "trapsess",
+  "origin": {
+    "source": "cli",
+    "mode": "user",
+    "sessionId": "trapsess",
+    "version": "3.0.55"
+  },
+  "messages": [
+    {
+      "id": "u1",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855599000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 111111,
+        "outputTokens": 111111,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    {
+      "id": "m1",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855600000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 1000,
+        "outputTokens": 100,
+        "cacheReadTokens": 200,
+        "cacheWriteTokens": 50
+      }
+    },
+    {
+      "id": "m2",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855601000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 4,
+        "outputTokens": 60,
+        "cacheReadTokens": 30000,
+        "cacheWriteTokens": 0
+      }
+    },
+    {
+      "id": "m3",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_named",
+          "name": "run_commands",
+          "input": {
+            "scrubbed": true
+          }
+        },
+        {
+          "type": "tool_use",
+          "name": "read_files",
+          "input": {
+            "scrubbed": true
+          }
+        },
+        {
+          "type": "tool_use",
+          "id": "call_nameless",
+          "input": {
+            "scrubbed": true
+          }
+        },
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855602000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 500,
+        "outputTokens": 5,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    {
+      "id": "m4",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_orphan",
+          "name": "search_codebase",
+          "input": {
+            "scrubbed": true
+          }
+        }
+      ],
+      "ts": 1786855603000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      }
+    },
+    {
+      "id": "",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855604000,
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 222222,
+        "outputTokens": 222222,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    {
+      "id": "m6",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "modelInfo": {
+        "id": "claude-sonnet-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 7,
+        "outputTokens": 3,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    }
+  ],
+  "system_prompt": "SCRUBBED system prompt."
+}

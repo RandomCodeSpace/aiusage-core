@@ -1,0 +1,142 @@
+{
+  "writer_version": "0.21.12",
+  "capture_platform": "linux/x86_64",
+  "transport": "openai-compatible",
+  "wire_protocol_version": null,
+  "ledger_schema_version": 1,
+  "entry_sha256": "68cb29eb7ccc936d78ece5564ef55cae41a55b630e6657dc417c1f2e561cf4c9",
+  "entry_unchanged": true,
+  "provider_config_unchanged": true,
+  "recipe": "Two bounded noninteractive arithmetic samples using an existing local endpoint; second run resumes the same session. Tools disabled; 58-second process timeout; no new account or global config edits.",
+  "sanitization": "Content fields omitted through an accounting allow-list; original counters, times, models, record ordering, schema, and stable identities preserved exactly.",
+  "required_anchor": {
+    "versioned": {
+      "schemaVersion": "positive integer; compatible field shapes accepted for newer values",
+      "required": [
+        "id: nonempty string",
+        "inputTokens: integer",
+        "outputTokens: integer",
+        "totalTokens: integer"
+      ],
+      "optional": [
+        "cachedTokens: integer when present",
+        "thoughtsTokens: integer when present"
+      ]
+    },
+    "legacy": {
+      "schemaVersion": "absent",
+      "required": [
+        "id: nonempty string",
+        "at least one recognized integer token counter"
+      ]
+    }
+  },
+  "required_anchor_sha256": "16e41e3f2596412e8ab20894ef9cdefc58b3bd6884c51d9639a48063b990e231",
+  "captures": [
+    {
+      "phase": "before",
+      "started_utc": "2026-09-12T16:12:30.693030+00:00",
+      "ended_utc": "2026-09-12T16:12:34.820004+00:00",
+      "elapsed_seconds": 4.127,
+      "exit_code": 0,
+      "source_sha256": "c2487247cee6014f7f18ef2bf6041e697c493bcf3457db30eae7df428b396048",
+      "source_records": 1,
+      "fixture": "before.jsonl",
+      "fixture_sha256": "c2487247cee6014f7f18ef2bf6041e697c493bcf3457db30eae7df428b396048",
+      "fixture_records": 1
+    },
+    {
+      "phase": "after",
+      "started_utc": "2026-09-12T16:13:10.007110+00:00",
+      "ended_utc": "2026-09-12T16:13:12.879783+00:00",
+      "elapsed_seconds": 2.873,
+      "exit_code": 0,
+      "source_sha256": "5a58af436c803caf458f0666130c550a1de5ffaccc2867836b0cab63c541027f",
+      "source_records": 2,
+      "fixture": "after.jsonl",
+      "fixture_sha256": "5a58af436c803caf458f0666130c550a1de5ffaccc2867836b0cab63c541027f",
+      "fixture_records": 2
+    }
+  ],
+  "reasoning_writer_proof": {
+    "writer_version": "0.21.12",
+    "scope": "OpenAI-compatible transport used for this capture. Provider reasoning is completion_tokens_details.reasoning_tokens; missing values fall back to a text estimate, capped when completion_tokens is positive. Captured thoughtsTokens are zero.",
+    "artifacts": [
+      {
+        "file": "chunks/chunk-XDRXOSAD.js",
+        "sha256": "e9a7e7abdce413562a410a9e3a690cd19562983cabd6f5c31c662f5e943b51a8",
+        "lines": [
+          898,
+          904,
+          908,
+          923,
+          1201,
+          1203,
+          1207,
+          1222
+        ]
+      },
+      {
+        "file": "chunks/chunk-4KM2SYK5.js",
+        "sha256": "4485220d8f59d27e123ba4ae6ae60eff32326ffbc04c17c762467d5ea32ee084",
+        "lines": [
+          12461,
+          12485,
+          12486,
+          12487,
+          12488,
+          12489,
+          15303,
+          15304,
+          15305,
+          15306,
+          15307
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "toolchain": "go1.25.13",
+    "cgo_enabled": false,
+    "owning_adapter_package_tests": "passed",
+    "raw_and_sanitized_capture_oracle": "passed",
+    "first_insertions": {
+      "usage": 1,
+      "activity": 0,
+      "context": 0
+    },
+    "full_replay_insertions": {
+      "usage": 0,
+      "activity": 0,
+      "context": 0
+    },
+    "real_delta_insertions": {
+      "usage": 1,
+      "activity": 0,
+      "context": 0
+    },
+    "unchanged_after_delta_emissions": {
+      "usage": 0,
+      "activity": 0,
+      "context": 0
+    },
+    "source_hashes_unchanged": true,
+    "planted_content_rejected": true,
+    "provider_and_cost_remain_unknown": true,
+    "nonzero_reasoning_observed": false,
+    "stable_identities_preserved": true,
+    "required_anchor_mutations": "passed: missing, renamed, null, wrong type; ErrSourceFormat with no checkpoint",
+    "format_tests": [
+      "TestRequiredAnchorsDiagnoseDrift",
+      "TestFormatAdmissionPreservesLegacyZeroAndPartialEOF",
+      "TestAppendedAnchorFailureWithholdsCheckpoint",
+      "TestCompletePoisonIsReportedAndConsumed"
+    ],
+    "complete_poison": "ordinary error with consumed checkpoint when valid source anchors are present",
+    "whole_unknown_complete_source": "ErrSourceFormat; no checkpoint"
+  },
+  "stable_usage_keys": [
+    "qwen-code|ddc14557-54ba-4905-8634-8f8b578b2187",
+    "qwen-code|2b8756f4-546b-4971-b96e-9300eac3badb"
+  ]
+}

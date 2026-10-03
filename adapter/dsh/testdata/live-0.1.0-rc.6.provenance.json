@@ -1,0 +1,73 @@
+{
+  "harness": "DSH",
+  "version": "0.1.0-rc.6",
+  "captured_at": "2026-09-12T16:20:48.075124Z",
+  "goos": "linux",
+  "goarch": "amd64",
+  "entry_sha256": "c0226687bb20f45c603ec6fe50f3de16d1c3510c3a803304ec575ef9bc366c62",
+  "source_sha256": "a821f6c63eb4f8e1550a908a2a25177efb2b797c41809134c4d87fcc3509ccf3",
+  "source_records": 32,
+  "fixture_sha256": "a6c5b29a3e1b5de12bcf19c5a418c943d81657dcf5d4cca93da1afc8cb33cbe5",
+  "fixture_records": 7,
+  "source_unchanged": true,
+  "sanitization": "Whitelist accounting, original session/message/response/call identities, timestamps, sequence numbers and references, model/provider identifiers, and format version; replace cwd only. Remove content, arguments, results, request headers, and unrelated records.",
+  "reasoning_evidence": "versioned-writer alternative; the live capture has no separate reasoning counter. TestRC6WriterReasoningSubset is explicitly a constructed edge.",
+  "writer_files": [
+    {
+      "package": "@deepseek-ai/dsh-llm-pi-ai",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "61e0164ccb648cea986a869aa42a81fab2ce6b56538d8e187597084fc23c9d3a",
+      "lines": "377-388",
+      "evidence": "Captured Pi provider path folds reasoning into output; it emits input/output and nonzero cache buckets without an explicit reasoning counter."
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm-deepseek",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "093f80a934f1ecc0791599a9114caed85ab5e6fe1da5ab8d29639cad33b5d377",
+      "lines": "190-198,251-254,335",
+      "evidence": "Versioned alternate provider maps completion_tokens_details.reasoning_tokens to reasoningTokens while retaining completion_tokens as outputTokens, then emits the mapped usage chunk."
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "7e02740f9b10cfb965453ca26eb23795c4e8dc818038dd2c0f80aaade0100ea1",
+      "lines": "716-718",
+      "evidence": "Assembler preserves the complete usage object from the provider chunk."
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm",
+      "version": "0.1.0-rc.6",
+      "file": "lib/types/types.d.ts",
+      "sha256": "0fd85d2d9d27be17b677811fae77b780e278b474f4cf9af2ddeb95dd9c5d6d02",
+      "lines": "123-133",
+      "evidence": "TokenUsage requires inputTokens/outputTokens; cache and reasoning counters are optional."
+    },
+    {
+      "package": "@deepseek-ai/dsh-agent-loop",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "bf8ca1e9b05e9b78320a5e2f0b4e25395eba91dd72db6d3cb5626e3dfb529204",
+      "lines": "618-625,650-658",
+      "evidence": "Agent appends each provider chunk, feeds the assembler, and writes its unchanged usage to assistant/message when defined, with sourceEventSeqs."
+    },
+    {
+      "package": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "8b6ebc4509a3e969ab3ad6e0dfb553ae4861e5b101831afed23e593d148d97f3",
+      "lines": "170-171,1172-1181",
+      "evidence": "Durable JSONL serializes complete event objects; default compression stores the same logical records in concatenated zstd frames."
+    },
+    {
+      "package": "@deepseek-ai/dsh-token-meter",
+      "version": "0.1.0-rc.6",
+      "file": "lib/index.js",
+      "sha256": "f08078d215c4e4538e486618148e48e390f5efccd6f2fee2a96e42d9d50db43c",
+      "lines": "399-402",
+      "evidence": "Token meter explicitly excludes reasoning from the input+cacheRead+cacheWrite+output total to avoid double counting reasoning output."
+    }
+  ]
+}

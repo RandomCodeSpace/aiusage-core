@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "session_id": "1786853448040_dhd6i",
+  "source": "cli",
+  "started_at": "2026-08-16T04:10:48.045Z",
+  "ended_at": "2026-08-16T04:10:49.012Z",
+  "exit_code": 0,
+  "status": "completed",
+  "interactive": false,
+  "provider": "openai-compatible",
+  "model": "gemma4:31b-cloud",
+  "cwd": "/workspace/demo",
+  "workspace_root": "/workspace/demo",
+  "team_name": "team-FwcGd",
+  "enable_tools": true,
+  "enable_spawn": true,
+  "enable_teams": true,
+  "prompt": "SCRUBBED user prompt.",
+  "metadata": {
+    "sessionHistoryOrigin": {
+      "mode": "user",
+      "version": "3.0.55"
+    },
+    "title": "SCRUBBED title",
+    "totalCost": 0,
+    "aggregatedAgentsCost": 0,
+    "usage": {
+      "inputTokens": 4758,
+      "outputTokens": 8,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "totalCost": 0
+    },
+    "aggregateUsage": {
+      "inputTokens": 4758,
+      "outputTokens": 8,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "totalCost": 0
+    },
+    "prompt": "SCRUBBED user prompt.",
+    "systemPrompt": "SCRUBBED system prompt."
+  },
+  "messages_path": "1786853448040_dhd6i/1786853448040_dhd6i.messages.json"
+}

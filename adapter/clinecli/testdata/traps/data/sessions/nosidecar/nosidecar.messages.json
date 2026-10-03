@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-16T06:00:00.000Z",
+  "agent": "researcher",
+  "sessionId": "nosidecar",
+  "messages": [
+    {
+      "id": "n1",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786859000000,
+      "modelInfo": {
+        "id": "claude-haiku-4",
+        "provider": "anthropic"
+      },
+      "metrics": {
+        "inputTokens": 12,
+        "outputTokens": 4,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    }
+  ],
+  "system_prompt": "SCRUBBED system prompt."
+}

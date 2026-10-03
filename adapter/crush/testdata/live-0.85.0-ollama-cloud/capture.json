@@ -1,0 +1,141 @@
+{
+  "version": "crush version v0.85.0",
+  "goos": "linux",
+  "goarch": "amd64",
+  "started_at": "2026-09-13T08:10:44.002588+00:00",
+  "binary_sha256": "2c55822f8060bd12058e4348bd5ac5f1f7d7c6d1ec3e82828076ca9adf30d503",
+  "provider": "ollama-cloud",
+  "model": "gpt-oss:20b",
+  "pricing_url": "https://ollama.com/pricing",
+  "prompt": "Reply with exactly OK. Do not call tools or inspect any files.",
+  "first_exit": 0,
+  "first_finished_at": "2026-09-13T08:10:46.523242+00:00",
+  "second_prompt": "Reply with exactly DONE. Do not call tools or inspect any files.",
+  "second_started_at": "2026-09-13T08:11:25.878683+00:00",
+  "second_exit": 0,
+  "finished_at": "2026-09-13T08:11:27.246773+00:00",
+  "source_revision": "718edba704583245d1be5cde47785f458e430f35",
+  "schema": "crush-live-capture-v1",
+  "config": {
+    "models": {
+      "large": {
+        "provider": "ollama-cloud",
+        "model": "gpt-oss:20b",
+        "max_tokens": 256,
+        "reasoning_effort": "low"
+      },
+      "small": {
+        "provider": "ollama-cloud",
+        "model": "gpt-oss:20b",
+        "max_tokens": 64,
+        "reasoning_effort": "low"
+      }
+    },
+    "providers": {
+      "ollama-cloud": {
+        "type": "openai-compat",
+        "base_url": "https://ollama.com/v1",
+        "api_key": "$OLLAMA_API_KEY",
+        "discover_models": false,
+        "models": [
+          {
+            "id": "gpt-oss:20b",
+            "name": "Ollama Cloud GPT OSS 20B",
+            "cost_per_1m_in": 0.07,
+            "cost_per_1m_out": 0.3,
+            "cost_per_1m_in_cached": 0,
+            "cost_per_1m_out_cached": 0.035,
+            "context_window": 131072,
+            "default_max_tokens": 256,
+            "can_reason": true,
+            "supports_attachments": false
+          }
+        ]
+      }
+    },
+    "options": {
+      "disable_default_providers": true,
+      "disable_provider_auto_update": true,
+      "disable_metrics": true,
+      "disable_auto_summarize": true,
+      "auto_lsp": false,
+      "context_paths": [],
+      "global_context_paths": [],
+      "skills_paths": [],
+      "disabled_tools": [
+        "agent",
+        "agentic_fetch",
+        "bash",
+        "crush_info",
+        "crush_logs",
+        "download",
+        "edit",
+        "fetch",
+        "glob",
+        "grep",
+        "job_kill",
+        "job_output",
+        "list_mcp_resources",
+        "ls",
+        "lsp_diagnostics",
+        "lsp_references",
+        "lsp_restart",
+        "multiedit",
+        "parallel",
+        "question",
+        "read_mcp_resource",
+        "sourcegraph",
+        "todos",
+        "view",
+        "web_fetch",
+        "web_search",
+        "write"
+      ],
+      "notification_style": "disabled"
+    },
+    "mcp": {},
+    "lsp": {}
+  },
+  "snapshots": {
+    "first": {
+      "source_db_sha256": "5dbf74c717dacbf933a448af6b5c352cf52322241334b6ac5803f447b5384412",
+      "fixture_sha256": "b69695a72fbc66db87e29c779e5b27b38b864c8c305e5c483758b99d466a245f",
+      "session_id": "142e73d2-10b5-4218-baa5-5d5015dc2bc7",
+      "message_count": 2,
+      "prompt_tokens_assigned": 10733,
+      "completion_tokens_assigned": 164,
+      "cost_usd": 0.00080051,
+      "created_at": 1789287044,
+      "updated_at": 1789287046
+    },
+    "second": {
+      "source_db_sha256": "e433fd1513f73a62a2ce217f55292923c101736444b66c79e3f0ba24fc8b92e6",
+      "fixture_sha256": "7ab02ea72deceed65037fddb480524d5f94edd7eb758acffa42aa642327ab129",
+      "session_id": "142e73d2-10b5-4218-baa5-5d5015dc2bc7",
+      "message_count": 4,
+      "prompt_tokens_assigned": 10540,
+      "completion_tokens_assigned": 29,
+      "cost_usd": 0.0015470100000000001,
+      "created_at": 1789287044,
+      "updated_at": 1789287087
+    }
+  },
+  "pricing_semantics": "Crush-calculated session cost at Ollama published token rates, reported by the harness. This is not an account invoice; subscription discounts and credits are not inferred.",
+  "cache_rate_mapping": "Crush v0.85.0 maps cost_per_1m_out_cached to CacheReadTokens and cost_per_1m_in_cached to CacheCreationTokens. Ollama gpt-oss:20b publishes a cached-input rate and no cache-creation rate.",
+  "sanitization": "All IDs, join relationships, counters, cost floats, models, providers, timestamps, and non-content fields are retained. Session title and todos and message parts are replaced with planted placeholders. Only sessions/messages are exported, messages first to preserve timestamps under source triggers. No credentials, private context, files, logs, or reasoning text are included.",
+  "recipe": [
+    "Use Crush v0.85.0 on linux/amd64 in a new empty project with separate CRUSH_GLOBAL_CONFIG, CRUSH_GLOBAL_DATA and CRUSH_CACHE_DIR directories.",
+    "Write config below to the isolated global crush.json; reuse OLLAMA_API_KEY from the environment. Set CRUSH_CLIENT_SERVER=0, CRUSH_DISABLE_DEFAULT_PROVIDERS=1 and CRUSH_DISABLE_PROVIDER_AUTO_UPDATE=1.",
+    "Run crush run --quiet --cwd <project> with prompt. Both model selections, tools, context paths and output limits are recorded in config. Each command has a 90-second outer timeout.",
+    "After exit 0, snapshot <project>/.crush/crush.db through SQLite read-only Connection.backup into first.db.",
+    "Run crush run --quiet --continue --cwd <project> with second_prompt; after exit 0, snapshot second.db the same way.",
+    "Export session/message accounting columns from each snapshot, replacing content only. Preserve the exact before/after cost relationship."
+  ],
+  "pricing_verified_at": "2026-09-13T08:16:05.872243+00:00",
+  "pricing_page_sha256": "3ebe5f26a061e03412f6ecd9c17ac71c0c1a16463f185fddb186c4a8584fb8bc",
+  "pricing_usd_per_million_tokens": {
+    "input": 0.07,
+    "cached_input": 0.035,
+    "output": 0.3
+  }
+}

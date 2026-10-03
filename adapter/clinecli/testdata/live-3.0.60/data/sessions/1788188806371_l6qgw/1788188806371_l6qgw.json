@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "session_id": "1788188806371_l6qgw",
+  "source": "cli",
+  "pid": 0,
+  "started_at": "2026-08-31T15:06:46.376Z",
+  "ended_at": "2026-08-31T15:06:49.515Z",
+  "exit_code": 0,
+  "status": "completed",
+  "interactive": false,
+  "provider": "openai-compatible",
+  "model": "gemma4:31b-cloud",
+  "cwd": "/workspace/capture",
+  "workspace_root": "/workspace/capture",
+  "team_name": "team-sanitized",
+  "enable_tools": true,
+  "enable_spawn": true,
+  "enable_teams": true,
+  "prompt": "<redacted>",
+  "metadata": {
+    "sessionHistoryOrigin": {
+      "mode": "user",
+      "version": "3.0.60"
+    },
+    "title": "<redacted>",
+    "totalCost": 0,
+    "aggregatedAgentsCost": 0,
+    "usage": {
+      "inputTokens": 4860,
+      "outputTokens": 2,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "totalCost": 0
+    },
+    "aggregateUsage": {
+      "inputTokens": 4860,
+      "outputTokens": 2,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "totalCost": 0
+    }
+  },
+  "messages_path": "/workspace/capture/1788188806371_l6qgw.messages.json"
+}

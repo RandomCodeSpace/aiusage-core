@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-31T15:06:49.503Z",
+  "agent": "lead",
+  "sessionId": "1788188806371_l6qgw",
+  "origin": {
+    "source": "cli",
+    "mode": "user",
+    "sessionId": "1788188806371_l6qgw",
+    "version": "3.0.60"
+  },
+  "messages": [
+    {
+      "id": "msg_mthdg1mt_1",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "<redacted>"
+        }
+      ],
+      "ts": 1788188806469
+    },
+    {
+      "id": "msg_BFDjZVbl",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "<redacted>"
+        }
+      ],
+      "ts": 1788188809496,
+      "modelInfo": {
+        "id": "gemma4:31b-cloud",
+        "provider": "openai-compatible"
+      },
+      "metrics": {
+        "inputTokens": 4860,
+        "outputTokens": 2,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    }
+  ],
+  "system_prompt": "<redacted>"
+}

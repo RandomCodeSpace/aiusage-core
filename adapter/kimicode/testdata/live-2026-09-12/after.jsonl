@@ -1,0 +1,7 @@
+{"type":"metadata","protocol_version":"1.5","created_at":1789229534162}
+{"type":"llm.request","time":1789229534201,"model":"gemma4:31b-cloud","modelAlias":"__kimi_env_model__","provider":"openai","turnStep":"0.1","maxTokens":128}
+{"type":"usage.record","time":1789229534683,"model":"__kimi_env_model__","usageScope":"turn","usage":{"inputOther":157,"output":2,"inputCacheRead":0,"inputCacheCreation":0}}
+{"type":"context.append_loop_event","time":1789229534685,"event":{"type":"step.end","usage":{"inputOther":157,"output":2,"inputCacheRead":0,"inputCacheCreation":0}}}
+{"type":"llm.request","time":1789229648503,"model":"gemma4:31b-cloud","modelAlias":"__kimi_env_model__","provider":"openai","turnStep":"1.1","maxTokens":128}
+{"type":"usage.record","time":1789229648997,"model":"__kimi_env_model__","usageScope":"turn","usage":{"inputOther":299,"output":2,"inputCacheRead":0,"inputCacheCreation":0}}
+{"type":"context.append_loop_event","time":1789229648999,"event":{"type":"step.end","usage":{"inputOther":299,"output":2,"inputCacheRead":0,"inputCacheCreation":0}}}

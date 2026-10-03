@@ -1,0 +1,5 @@
+{"type": "session", "version": 3, "id": "01a008bc-525d-7545-bcac-b3323ca79c5a", "timestamp": "2026-08-16T04:02:34.717Z", "cwd": "/home/example/my-lab/pi"}
+{"type": "model_change", "id": "9c1ab2ce", "parentId": null, "timestamp": "2026-08-16T04:02:34.782Z", "provider": "ollama", "modelId": "ministral-3:3b-cloud"}
+{"type": "thinking_level_change", "id": "16d96c0e", "parentId": "9c1ab2ce", "timestamp": "2026-08-16T04:02:34.782Z", "thinkingLevel": "off"}
+{"type": "message", "id": "b90d815f", "parentId": "16d96c0e", "timestamp": "2026-08-16T04:02:34.788Z", "message": {"role": "user", "content": [{"type": "text", "text": "<scrubbed user text>"}], "timestamp": 1786852954788}}
+{"type": "message", "id": "79128b0e", "parentId": "b90d815f", "timestamp": "2026-08-16T04:02:35.164Z", "message": {"role": "assistant", "content": [], "api": "openai-completions", "provider": "ollama", "model": "ministral-3:3b-cloud", "usage": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "totalTokens": 0, "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0}}, "stopReason": "error", "timestamp": 1786852954832, "errorMessage": "<scrubbed provider error>"}}

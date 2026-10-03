@@ -1,0 +1,14 @@
+{
+  "agent:main:pitool": {
+    "sessionId": "7964daae-e624-4e5c-9d67-bcb0742de3e2",
+    "updatedAt": 1786854360780,
+    "sessionStartedAt": 1786854349721,
+    "skillsSnapshot": {
+      "skills": [
+        { "name": "accessibility" },
+        { "name": "dependencies" },
+        { "name": "frontend-design" }
+      ]
+    }
+  }
+}

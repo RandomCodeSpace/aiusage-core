@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-16T04:10:48.998Z",
+  "agent": "lead",
+  "sessionId": "1786853448040_dhd6i",
+  "origin": {
+    "source": "cli",
+    "mode": "user",
+    "sessionId": "1786853448040_dhd6i",
+    "version": "3.0.55"
+  },
+  "messages": [
+    {
+      "id": "msg_msvaeokb_1",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786853448155
+    },
+    {
+      "id": "msg_BZEHy5S0",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786853448987,
+      "modelInfo": {
+        "id": "gemma4:31b-cloud",
+        "provider": "openai-compatible"
+      },
+      "metrics": {
+        "inputTokens": 4758,
+        "outputTokens": 8,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    }
+  ],
+  "system_prompt": "SCRUBBED system prompt."
+}

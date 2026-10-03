@@ -1,0 +1,115 @@
+{
+  "writer_version": "0.36.1",
+  "capture_platform": "linux/x86_64",
+  "transport": "openai-compatible",
+  "wire_protocol_version": "1.5",
+  "ledger_schema_version": null,
+  "entry_sha256": "e1ca88960c1e09c40e09ef43a6ac180eef20449aa4528b0ee36105aa7b83bba6",
+  "entry_unchanged": true,
+  "provider_config_unchanged": true,
+  "recipe": "Two bounded noninteractive arithmetic samples using an existing local endpoint; second run resumes the same session. Tools disabled; 58-second process timeout; no new account or global config edits.",
+  "sanitization": "Content fields omitted through an accounting allow-list; original counters, times, models, record ordering, schema, and stable identities preserved exactly.",
+  "required_anchor": {
+    "discriminator": "type",
+    "versioned": {
+      "metadata": [
+        "protocol_version: nonempty string other than reserved legacy marker",
+        "created_at: integer"
+      ],
+      "llm.request": [
+        "model: nonempty string"
+      ],
+      "usage.record": [
+        "usage: object",
+        "usage.inputOther: integer",
+        "usage.output: integer",
+        "usage.inputCacheRead: integer",
+        "usage.inputCacheCreation: integer"
+      ]
+    },
+    "legacy": {
+      "header": "absent",
+      "llm.request": [
+        "model: nonempty string"
+      ],
+      "usage.record": [
+        "usage: object with at least one recognized integer counter"
+      ]
+    }
+  },
+  "required_anchor_sha256": "99f505b4802f8a4327441f84d56aa15d80ccbadd3f502675586b1edc87574829",
+  "captures": [
+    {
+      "phase": "before",
+      "started_utc": "2026-09-12T16:12:12.984311+00:00",
+      "ended_utc": "2026-09-12T16:12:16.589463+00:00",
+      "elapsed_seconds": 3.605,
+      "exit_code": 0,
+      "source_sha256": "163848d41230bcb96dfbe0170f254a96de8ed269d890bc7504f338310eab5beb",
+      "source_records": 14,
+      "fixture": "before.jsonl",
+      "fixture_sha256": "e57bc269d9e021d91646853100b6d96a74d7631f8e09f2c1476f80cf9dcb2d91",
+      "fixture_records": 4
+    },
+    {
+      "phase": "after",
+      "started_utc": "2026-09-12T16:14:07.228270+00:00",
+      "ended_utc": "2026-09-12T16:14:11.844522+00:00",
+      "elapsed_seconds": 4.616,
+      "exit_code": 0,
+      "source_sha256": "36ec9258152580e20e010c6518baac47829c70d914f86060998a40df54053a4b",
+      "source_records": 23,
+      "fixture": "after.jsonl",
+      "fixture_sha256": "71d42bd09d1774a3f84035bc60e0719b37d3ed34cda21b2097c83c0e3f436836",
+      "fixture_records": 7
+    }
+  ],
+  "verification": {
+    "toolchain": "go1.25.13",
+    "cgo_enabled": false,
+    "owning_adapter_package_tests": "passed",
+    "raw_and_sanitized_capture_oracle": "passed",
+    "first_insertions": {
+      "usage": 1,
+      "activity": 0,
+      "context": 0
+    },
+    "full_replay_insertions": {
+      "usage": 0,
+      "activity": 0,
+      "context": 0
+    },
+    "real_delta_insertions": {
+      "usage": 1,
+      "activity": 0,
+      "context": 0
+    },
+    "unchanged_after_delta_emissions": {
+      "usage": 0,
+      "activity": 0,
+      "context": 0
+    },
+    "source_hashes_unchanged": true,
+    "planted_content_rejected": true,
+    "provider_and_cost_remain_unknown": true,
+    "stable_identities_preserved": true,
+    "required_anchor_mutations": "passed: missing, renamed, null, wrong type; ErrSourceFormat with no checkpoint",
+    "format_tests": [
+      "TestRequiredAnchorsDiagnoseDrift",
+      "TestFormatAdmissionPreservesLegacyZeroAndPartialEOF",
+      "TestAppendedAnchorFailureWithholdsCheckpoint",
+      "TestCompletePoisonIsReportedAndConsumed"
+    ],
+    "complete_poison": "ordinary error with consumed checkpoint when valid source anchors are present",
+    "whole_unknown_complete_source": "ErrSourceFormat; no checkpoint"
+  },
+  "source_identity": {
+    "workspace": "wd_work_d93cc5eee78f",
+    "session": "session_d3e785cb-20bb-49ab-8615-85fec4cc52c8",
+    "agent": "main"
+  },
+  "stable_usage_keys": [
+    "kimi-code|98064249223f8169e43539beeb851fdfe8bbea3d80015330096c6a60f7e21532",
+    "kimi-code|555db90338b69d713e1975ffce1394cb6867532103c523ea9dbda646be18e8c0"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-16T04:45:06.548Z",
+  "agent": "lead",
+  "sessionId": "1786855504226_rafg6",
+  "origin": {
+    "source": "cli",
+    "mode": "user",
+    "sessionId": "1786855504226_rafg6",
+    "version": "3.0.55"
+  },
+  "messages": [
+    {
+      "id": "msg_msvbmr4z_1",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855504355
+    },
+    {
+      "id": "msg_0P7wghlz",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_vj271jx5",
+          "name": "run_commands",
+          "input": {
+            "scrubbed": true
+          }
+        }
+      ],
+      "ts": 1786855505886,
+      "modelInfo": {
+        "id": "gemma4:31b-cloud",
+        "provider": "openai-compatible"
+      },
+      "metrics": {
+        "inputTokens": 4770,
+        "outputTokens": 20,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    {
+      "id": "msg_GTaekXAf",
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_vj271jx5",
+          "name": "run_commands",
+          "content": [
+            {
+              "query": "SCRUBBED",
+              "result": "SCRUBBED",
+              "success": true
+            }
+          ]
+        }
+      ],
+      "ts": 1786855505909
+    },
+    {
+      "id": "msg_7R6ON9ZS",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "SCRUBBED conversation text."
+        }
+      ],
+      "ts": 1786855506538,
+      "modelInfo": {
+        "id": "gemma4:31b-cloud",
+        "provider": "openai-compatible"
+      },
+      "metrics": {
+        "inputTokens": 4822,
+        "outputTokens": 17,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    }
+  ],
+  "system_prompt": "SCRUBBED system prompt."
+}

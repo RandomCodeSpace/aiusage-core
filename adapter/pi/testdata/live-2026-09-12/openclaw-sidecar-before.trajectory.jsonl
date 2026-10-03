@@ -1,0 +1,7 @@
+{"type":"session.started","schemaVersion":1,"seq":1,"ts":"2026-09-12T16:07:21.941Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{}}
+{"type":"trace.metadata","schemaVersion":1,"seq":2,"ts":"2026-09-12T16:07:21.947Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{}}
+{"type":"context.compiled","schemaVersion":1,"seq":3,"ts":"2026-09-12T16:07:21.980Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{}}
+{"type":"prompt.submitted","schemaVersion":1,"seq":4,"ts":"2026-09-12T16:07:21.991Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{}}
+{"type":"model.completed","schemaVersion":1,"seq":5,"ts":"2026-09-12T16:07:24.659Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{"usage":{"input":4837,"output":22,"total":4859}}}
+{"type":"trace.artifacts","schemaVersion":1,"seq":6,"ts":"2026-09-12T16:07:24.660Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{"usage":{"input":4837,"output":22,"total":4859}}}
+{"type":"session.ended","schemaVersion":1,"seq":7,"ts":"2026-09-12T16:07:24.660Z","modelApi":"ollama","modelId":"gemma4:31b","provider":"ollama-cloud","data":{}}
