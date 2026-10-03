@@ -504,7 +504,7 @@ func collectJSON(ctx context.Context, src adapter.Source) (adapter.Observation, 
 			}
 			return nil
 		}
-		if d.IsDir() || !strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
+		if !adapter.WalkEntryIsFile(d, path) || !strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
 			return nil
 		}
 		raw, rerr := os.ReadFile(path) // read-only

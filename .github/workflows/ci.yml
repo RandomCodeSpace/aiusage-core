@@ -7,13 +7,15 @@ on:
 permissions:
   contents: read
 
+env:
+  CGO_ENABLED: "0"
+  GOTOOLCHAIN: local
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Minimum Go / linux-amd64
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
-    env:
-      CGO_ENABLED: "0"
-      GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -22,6 +24,67 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Test library and examples
-        run: go test ./...
+        run: go test -count=1 ./...
       - name: Build library
         run: go build ./...
+
+  compatibility:
+    name: Current Go / ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-amd64
+          - runner: macos-15
+            target: darwin-arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+      - name: Test library and examples
+        run: go test -count=1 ./...
+      - name: Cross-build supported targets
+        if: matrix.target == 'linux-amd64'
+        shell: bash
+        run: |
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            GOOS="${target%/*}" GOARCH="${target#*/}" go build ./...
+          done
+
+  race:
+    name: Race detector / linux-amd64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+      - name: Test with race detector
+        run: go test -race -count=1 ./...
+
+  govulncheck:
+    name: Vulnerability scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+      - name: Check reachable vulnerabilities
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
+          govulncheck ./...
