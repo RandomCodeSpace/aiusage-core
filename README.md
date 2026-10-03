@@ -12,6 +12,11 @@ for the source commit, license, and extraction boundary.
 Requires Go 1.25.13 or later. SQLite and zstd are pure Go, so builds work with
 `CGO_ENABLED=0`.
 
+Linux and macOS are supported. See the
+[compatibility contract](COMPATIBILITY.md) for tested Go versions, native tests,
+cross-build coverage, and accounting guarantees, and the
+[security policy](SECURITY.md) for reporting and trust boundaries.
+
 ```sh
 go get github.com/RandomCodeSpace/aiusage-core
 ```

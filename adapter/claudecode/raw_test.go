@@ -149,7 +149,12 @@ func TestDedupKeyBytesIndependentOfRaw(t *testing.T) {
 	if len(evs) != 2 {
 		t.Fatalf("want 2 events, got %d", len(evs))
 	}
-	path := filepath.Join(root, "projects", "home-dev-projects-leak", "sess-9.jsonl")
+	// Discovery resolves root symlinks before deriving path-based keys.
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatalf("resolve fixture root: %v", err)
+	}
+	path := filepath.Join(canonicalRoot, "projects", "home-dev-projects-leak", "sess-9.jsonl")
 	want := map[string]string{
 		"msg-7": "claude-code|msg-7",
 		"":      fmt.Sprintf("claude-code|%s|%x", path, sha1.Sum([]byte(noID))),
