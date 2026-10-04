@@ -19,13 +19,36 @@ BEFORE UPDATE ON usage_events
 BEGIN SELECT RAISE(ABORT, 'usage_events is append-only: UPDATE forbidden'); END`
 )
 
+// Historical updates are only allowed while the canonical guard is suspended
+// inside a write transaction. Both callers restore it before committing.
+func openUsageUpdateGuard(ctx context.Context, tx *sql.Tx) error {
+	var triggerSQL string
+	if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master
+		WHERE type='trigger' AND name='trg_events_no_update' AND tbl_name='usage_events'`).Scan(&triggerSQL); err != nil {
+		return fmt.Errorf("store: read usage update guard: %w", err)
+	}
+	normalize := func(s string) string {
+		s = strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(s), ";")), " ")
+		return strings.Replace(s, "CREATE TRIGGER IF NOT EXISTS", "CREATE TRIGGER", 1)
+	}
+	if normalize(triggerSQL) != normalize(usageNoUpdateSQL) {
+		return fmt.Errorf("store: historical update requires the canonical usage update guard")
+	}
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER trg_events_no_update`); err != nil {
+		return fmt.Errorf("store: open usage update guard: %w", err)
+	}
+	return nil
+}
+
 // SyncUnpriced fills at most 512 NULL costs from one revision of the pricing
 // tables. Priced rows are never selected or overwritten. The persisted cursor
 // avoids rescanning old unknown models until the revision changes; later IDs
 // remain eligible. The bound covers candidates and writes, not SQLite's scan
 // through intervening priced rows. Raw and transient cache-TTL data are absent.
+// The callback must account for that absence; pricing.Engine.PriceStoredEvent
+// refuses costs that depend on the missing cache-lifetime split.
 //
-// This is the sole historical update exception. The strict update trigger is
+// This is a bounded historical update exception. The strict update trigger is
 // removed and restored inside the same write transaction as the guarded price
 // updates, derived rollup changes and cursor. Failure rolls all of them back.
 func (l *Ledger) SyncUnpriced(ctx context.Context, revision string,
@@ -108,18 +131,6 @@ func (l *Ledger) SyncUnpriced(ctx context.Context, revision string,
 		priced = append(priced, e)
 	}
 	if len(priced) > 0 {
-		var triggerSQL string
-		if err := tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master
-			WHERE type='trigger' AND name='trg_events_no_update' AND tbl_name='usage_events'`).Scan(&triggerSQL); err != nil {
-			return 0, fmt.Errorf("store: read price sync update guard: %w", err)
-		}
-		normalize := func(s string) string {
-			s = strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(s), ";")), " ")
-			return strings.Replace(s, "CREATE TRIGGER IF NOT EXISTS", "CREATE TRIGGER", 1)
-		}
-		if normalize(triggerSQL) != normalize(usageNoUpdateSQL) {
-			return 0, fmt.Errorf("store: price sync requires the canonical usage update guard")
-		}
 		var mark string
 		if err := tx.QueryRowContext(ctx, `SELECT value FROM schema_meta WHERE key=?`, rollupWatermarkKey).Scan(&mark); err != nil {
 			return 0, fmt.Errorf("store: read price sync rollup watermark: %w", err)
@@ -130,8 +141,8 @@ func (l *Ledger) SyncUnpriced(ctx context.Context, revision string,
 		if err := checkPriceSyncRollup(ctx, tx, &roll); err != nil {
 			return 0, err
 		}
-		if _, err := tx.ExecContext(ctx, `DROP TRIGGER trg_events_no_update`); err != nil {
-			return 0, fmt.Errorf("store: open price sync update guard: %w", err)
+		if err := openUsageUpdateGuard(ctx, tx); err != nil {
+			return 0, err
 		}
 		for _, e := range priced {
 			result, err := tx.ExecContext(ctx, `UPDATE usage_events SET cost_micro_usd=?, price_source=?
@@ -157,7 +168,7 @@ func (l *Ledger) SyncUnpriced(ctx context.Context, revision string,
 				}
 			}
 		}
-		if _, err := tx.ExecContext(ctx, triggerSQL); err != nil {
+		if _, err := tx.ExecContext(ctx, usageNoUpdateSQL); err != nil {
 			return 0, fmt.Errorf("store: restore price sync update guard: %w", err)
 		}
 	}

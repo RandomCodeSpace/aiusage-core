@@ -57,7 +57,7 @@ func (c countingConn) Prepare(q string) (driver.Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return countingStmt{Stmt: s}, nil
+	return countingStmt{Stmt: s, query: q}, nil
 }
 
 // queriesDuring returns the SQL prepared while fn executed.
@@ -76,7 +76,13 @@ func queriesDuring(fn func()) []string {
 // countingStmt counts executions via the context interfaces, which
 // database/sql prefers over the embedded legacy Exec/Query whenever they are
 // present — so every statement execution passes through exactly one counter.
-type countingStmt struct{ driver.Stmt }
+type countingStmt struct {
+	driver.Stmt
+	query string
+}
+
+// Tests are sequential. This hook lets a writer commit between reader queries.
+var beforeCountedQuery func(string)
 
 func (s countingStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	stmtCount.Add(1)
@@ -88,6 +94,9 @@ func (s countingStmt) ExecContext(ctx context.Context, args []driver.NamedValue)
 }
 
 func (s countingStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	if beforeCountedQuery != nil {
+		beforeCountedQuery(s.query)
+	}
 	stmtCount.Add(1)
 	qc, ok := s.Stmt.(driver.StmtQueryContext)
 	if !ok {
@@ -112,7 +121,7 @@ func init() {
 func openCounting(t *testing.T) *Ledger {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "usage.db")
-	dsn := "file:" + path + "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)"
+	dsn := sqliteFileURI(path, false)
 	db, err := sql.Open("sqlite-counting", dsn)
 	if err != nil {
 		t.Fatalf("open counting db: %v", err)
@@ -186,6 +195,63 @@ func TestSummarizeQueryCount(t *testing.T) {
 	})
 	if n != 2 {
 		t.Errorf("grouped Summarize ran %d statements, want exactly 2 (grouped pass + distinct sessions)", n)
+	}
+}
+
+func TestSummaryUsesOneSnapshotDuringCollection(t *testing.T) {
+	for _, mode := range []string{"ledger", "rollup", "explicit-rollup"} {
+		t.Run(mode, func(t *testing.T) {
+			reader := openCounting(t)
+			writer, err := Open(reader.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer writer.Close()
+			ctx := context.Background()
+			at := time.Date(2026, 10, 4, 12, 0, 1, 0, time.UTC)
+			first := ev("first", "codex", at, 100)
+			first.SessionID = "first-session"
+			if _, err := writer.InsertEvents(ctx, []model.UsageEvent{first}); err != nil {
+				t.Fatal(err)
+			}
+			injected := false
+			beforeCountedQuery = func(query string) {
+				if injected || !strings.HasPrefix(strings.TrimSpace(query), "SELECT COUNT(DISTINCT") {
+					return
+				}
+				injected = true
+				second := ev("second", "codex", at.Add(time.Second), 200)
+				second.SessionID = "second-session"
+				if _, err := writer.InsertEvents(ctx, []model.UsageEvent{second}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Cleanup(func() { beforeCountedQuery = nil })
+			filter := Filter{GroupBy: []string{"tool"}}
+			if mode == "ledger" {
+				filter.Since = at // Unaligned lower bound forces the ledger path.
+			}
+			var total Bucket
+			if mode == "explicit-rollup" {
+				summary, err := reader.SummarizeRollup(ctx, filter)
+				if err != nil {
+					t.Fatal(err)
+				}
+				total = summary.Totals
+			} else {
+				summary, err := reader.Summarize(ctx, filter)
+				if err != nil {
+					t.Fatal(err)
+				}
+				total = summary.Totals
+			}
+			if !injected {
+				t.Fatal("did not exercise a commit between summary queries")
+			}
+			if total.Events != 1 || total.Sessions != 1 || total.Total != 100 {
+				t.Fatalf("summary mixed snapshots: %+v", total)
+			}
+		})
 	}
 }
 

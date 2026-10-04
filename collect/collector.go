@@ -91,16 +91,33 @@ type Refresher interface {
 type Option func(*cycleOptions)
 
 type cycleOptions struct {
-	pricer  Pricer
-	noRaw   bool
-	onCycle func(CycleStats, error)
+	pricer          Pricer
+	noRaw           bool
+	onCycle         func(CycleStats, error)
+	reconcileClaude bool
 }
 
 // WithPricer stamps a cost on every new event from the price table in effect at
 // ingest. A pricer with Revision() string also enables historical price sync
 // on stores that support it. Without a pricer, events are stored unpriced.
+// If the pricer also has PriceStoredEvent, historical sync uses that method to
+// account for source enrichment that was not persisted; fresh events continue
+// to use PriceEvent.
 func WithPricer(p Pricer) Option {
 	return func(o *cycleOptions) { o.pricer = p }
+}
+
+// WithClaudeReconciliation opts into updating growing Claude usage records.
+// It requires a store with ReconcileClaudeBatch, such as *store.Ledger.
+// Claude sources are reread each pass so even pre-existing checkpoints cannot
+// hide growth. Other adapters and collection without this option are unchanged.
+// See store.Ledger.ReconcileClaudeBatch for the bounded mutation contract.
+func WithClaudeReconciliation() Option {
+	return func(o *cycleOptions) { o.reconcileClaude = true }
+}
+
+type claudeReconciler interface {
+	ReconcileClaudeBatch(context.Context, store.ObservationBatch) (store.Applied, error)
 }
 
 // WithCycleCallback reports the outcome of each pass Run makes: the stats and
@@ -181,9 +198,8 @@ func (s CycleStats) AllFailed() bool {
 
 // RunOnce performs one full collection pass. Per-source and per-adapter errors
 // are non-fatal: they are appended to CycleStats.Errors and collection
-// continues. RunOnce only returns a non-nil error for failures that prevent
-// the cycle from making any meaningful progress (none currently — the loop is
-// fully resilient), so callers may safely run it on a ticker.
+// continues. RunOnce returns a non-nil error for cancellation or an explicitly
+// requested capability that the store does not support.
 //
 // A cancelled context truncates the pass: RunOnce returns ctx.Err() together
 // with CycleStats.Canceled set, and the counts in those stats cover only the
@@ -196,7 +212,16 @@ func RunOnce(ctx context.Context, reg *adapter.Registry, st Store, dc adapter.Di
 	}
 
 	var stats CycleStats
+	if err := ctx.Err(); err != nil {
+		stats.Canceled = true
+		return stats, err
+	}
 	observedAt := nowFn()
+	if o.reconcileClaude {
+		if _, ok := st.(claudeReconciler); !ok {
+			return stats, fmt.Errorf("collect: Claude reconciliation requires a store with ReconcileClaudeBatch")
+		}
+	}
 
 	// Before anything is appended. The rollup's deltas ride the event
 	// transactions, so the only way it can fall behind is a ledger that grew
@@ -229,7 +254,13 @@ func RunOnce(ctx context.Context, reg *adapter.Registry, st Store, dc adapter.Di
 				SyncUnpriced(context.Context, string, func(model.UsageEvent) (int64, string, bool)) (int, error)
 			}); ok {
 				var err error
-				stats.PricesSynced, err = s.SyncUnpriced(ctx, revision, o.pricer.PriceEvent)
+				price := o.pricer.PriceEvent
+				if stored, ok := o.pricer.(interface {
+					PriceStoredEvent(model.UsageEvent) (int64, string, bool)
+				}); ok {
+					price = stored.PriceStoredEvent
+				}
+				stats.PricesSynced, err = s.SyncUnpriced(ctx, revision, price)
 				if err != nil {
 					stats.Errors = append(stats.Errors, fmt.Sprintf("price sync: %v", err))
 					if ctx.Err() != nil {
@@ -263,7 +294,15 @@ func RunOnce(ctx context.Context, reg *adapter.Registry, st Store, dc adapter.Di
 			errsBefore := len(stats.Errors)
 			progressed := false
 
-			obs, err := collectSource(ctx, ad, st, src)
+			var obs adapter.Observation
+			var err error
+			apply := st.ApplyBatch
+			if o.reconcileClaude && ad.ID() == model.ToolClaudeCode {
+				obs, err = ad.Collect(ctx, src)
+				apply = st.(claudeReconciler).ReconcileClaudeBatch
+			} else {
+				obs, err = collectSource(ctx, ad, st, src)
+			}
 			if err != nil {
 				stats.Errors = append(stats.Errors, fmt.Sprintf("collect %s %s: %v", ad.ID(), src.Path, err))
 				// Best-effort: a bad source must not abort the cycle. Still
@@ -288,7 +327,7 @@ func RunOnce(ctx context.Context, reg *adapter.Registry, st Store, dc adapter.Di
 			// regardless. Events, activity and skill contexts ride ONE
 			// transaction with the checkpoint, so the checkpoint can never
 			// advance past rows that did not land.
-			applied, sErr := storeObservation(ctx, st, obs, observedAt, evCp, o.pricer)
+			applied, sErr := storeObservation(ctx, apply, obs, observedAt, evCp, o.pricer)
 			stats.EventsSeen += len(obs.Events)
 			stats.EventsInserted += applied.Events
 			stats.ActivitySeen += len(obs.Activity)
@@ -334,6 +373,10 @@ func RunOnce(ctx context.Context, reg *adapter.Registry, st Store, dc adapter.Di
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		stats.Canceled = true
+		return stats, err
+	}
 	return stats, nil
 }
 
@@ -381,7 +424,7 @@ func collectSource(ctx context.Context, ad adapter.Adapter, st Store, src adapte
 // column at all: its cost is derived on read by joining the usage row it names,
 // so there is exactly one stamped cost per turn and no second copy to keep in
 // step with the ladder.
-func storeObservation(ctx context.Context, st Store, obs adapter.Observation, observedAt time.Time, cp *model.SourceCheckpoint, p Pricer) (store.Applied, error) {
+func storeObservation(ctx context.Context, apply func(context.Context, store.ObservationBatch) (store.Applied, error), obs adapter.Observation, observedAt time.Time, cp *model.SourceCheckpoint, p Pricer) (store.Applied, error) {
 	events, activity, contexts := obs.Events, obs.Activity, obs.TurnContexts
 	if len(events) == 0 && len(activity) == 0 && len(contexts) == 0 && len(obs.CodeChanges) == 0 && cp == nil {
 		return store.Applied{}, nil
@@ -421,7 +464,7 @@ func storeObservation(ctx context.Context, st Store, obs adapter.Observation, ob
 		}
 		changes[i] = change
 	}
-	return st.ApplyBatch(ctx, store.ObservationBatch{
+	return apply(ctx, store.ObservationBatch{
 		Events: stamped, Activity: acts, TurnContexts: ctxs, CodeChanges: changes, Checkpoint: cp,
 	})
 }

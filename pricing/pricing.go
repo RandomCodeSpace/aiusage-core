@@ -259,6 +259,9 @@ func ChargeFor(e model.UsageEvent) Charge {
 		CacheWrite5m:      w5,
 		CacheWrite1h:      w1,
 		AdditiveReasoning: model.ReasoningModeFor(e.Tool) == model.ReasoningAdditive,
+		// The collector's persisted identity distinguishes cumulative deltas
+		// from individual requests, including during historical price sync.
+		Aggregate: strings.HasPrefix(e.DedupKey, "agg|"+e.Tool+"|"),
 	}
 }
 
@@ -450,7 +453,10 @@ func (e *Engine) Price(c Charge) (int64, string, bool) {
 	if e == nil {
 		return 0, "", false
 	}
-	tables := e.tables()
+	return e.price(c, e.tables())
+}
+
+func (e *Engine) price(c Charge, tables []*Table) (int64, string, bool) {
 	for i, t := range tables {
 		r, ok := t.Lookup(c.Provider, c.Model)
 		if !ok {
@@ -504,4 +510,29 @@ func mergeOverride(r Rates, source string, lower []*Table, c Charge) (Rates, str
 // satisfies collect.Pricer.
 func (e *Engine) PriceEvent(ev model.UsageEvent) (int64, string, bool) {
 	return e.Price(ChargeFor(ev))
+}
+
+// PriceStoredEvent prices an event without assuming the transient CacheTTL
+// split survived storage. Cache writes are priced only when both possible TTL
+// extremes produce the same cost and provenance from one table snapshot. This
+// preserves verified free and equal-rate prices; ambiguous costs stay unknown.
+// Collection uses this optional method for historical price sync. PriceEvent
+// retains its existing behavior for fresh observations with source enrichment.
+func (e *Engine) PriceStoredEvent(ev model.UsageEvent) (int64, string, bool) {
+	if e == nil {
+		return 0, "", false
+	}
+	c := ChargeFor(ev)
+	tables := e.tables()
+	c.CacheWrite5m, c.CacheWrite1h = ev.CacheCreationTokens, 0
+	cost, source, ok := e.price(c, tables)
+	if !ok || ev.CacheCreationTokens == 0 {
+		return cost, source, ok
+	}
+	c.CacheWrite5m, c.CacheWrite1h = 0, ev.CacheCreationTokens
+	otherCost, otherSource, otherOK := e.price(c, tables)
+	if !otherOK || cost != otherCost || source != otherSource {
+		return 0, "", false
+	}
+	return cost, source, true
 }

@@ -6,9 +6,9 @@
 // and Open / OpenReadOnly are the only ways in. schema.sql always describes the
 // full latest schema; older files run the ordered steps in migrate.go.
 //
-// # HISTORY IS APPENDED, NEVER EDITED
+// # HISTORY IS APPENDED BY DEFAULT
 //
-// usage_events is the immutable record of what a harness spent, and two of the
+// usage_events records what a harness spent, and two of the
 // tables beside it are on the same terms: activity_events (one row per tool,
 // skill or hook invocation) and usage_turn_context (what a turn ran under).
 // Each carries BEFORE UPDATE and BEFORE DELETE triggers that RAISE(ABORT), so
@@ -16,12 +16,14 @@
 // this package. Rows arrive through INSERT .. ON CONFLICT(dedup_key) DO
 // NOTHING - deliberately not INSERT OR IGNORE, which would also swallow CHECK
 // violations - which is what makes a re-read of an unchanged source a no-op
-// rather than a double count. A correction is a NEW row with kind='adjustment';
-// nothing is ever rewritten, so a number this project once reported can always
-// be reproduced.
+// rather than a double count. The default correction mechanism is a NEW row
+// with kind='adjustment', preserving the earlier observation.
+// Explicit exceptions are SyncUnpriced (filling unknown costs) and the opt-in
+// ReconcileClaudeBatch (growing Claude usage). Neither changes the insertion
+// semantics of ApplyBatch, ApplyEvents or InsertEvents.
 //
 // aggregate_state, source_checkpoints, usage_rollup and activity_usage_counts
-// are the only mutable data tables (schema_meta holds the version stamp and the
+// are mutable working tables (schema_meta holds the version stamp and the
 // rollup watermark).
 // They are working state, not history: losing any of them costs a re-read or a
 // rebuild, never a fact.
@@ -38,7 +40,7 @@
 // # TWO HANDLES, AND THE ABSENCE THAT SEPARATES THEM
 //
 // Open returns a *Ledger: the full handle. It creates the file if absent,
-// applies WAL, synchronous=NORMAL, busy_timeout=5000 and foreign_keys=ON,
+// applies WAL, synchronous=FULL, busy_timeout=5000 and foreign_keys=ON,
 // migrates an older schema, refuses a newer one (an older binary must never
 // stamp a version backwards), and chmods the database and its
 // WAL/SHM sidecars to 0600 because the raw column can hold transcript content.

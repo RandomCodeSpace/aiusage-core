@@ -78,8 +78,8 @@ func Open(path string) (*Ledger, error) {
 
 	// modernc driver name is "sqlite". Pragmas applied via the DSN run on every
 	// pooled connection; the schema is managed once by ensureSchema below.
-	// synchronous=NORMAL is the WAL-recommended durability level (the default
-	// FULL fsyncs every commit; NORMAL only at checkpoints).
+	// FULL syncs every committed WAL transaction, including its checkpoints.
+	// NORMAL can lose acknowledged commits after an OS crash or power loss.
 	absolute, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("store: resolve database path: %w", err)
@@ -410,6 +410,10 @@ func (l *Ledger) ApplyObservation(ctx context.Context, events []model.UsageEvent
 // context conflicts on (usage dedup key, dimension) and does nothing, which is
 // what stops a re-read serving a turn's cost twice.
 func (l *Ledger) ApplyBatch(ctx context.Context, b ObservationBatch) (Applied, error) {
+	return l.applyBatch(ctx, b, false)
+}
+
+func (l *Ledger) applyBatch(ctx context.Context, b ObservationBatch, reconcileClaude bool) (Applied, error) {
 	events, activity, ctxs, cp := b.Events, b.Activity, b.TurnContexts, b.Checkpoint
 	if len(events) == 0 && len(activity) == 0 && len(ctxs) == 0 && len(b.CodeChanges) == 0 && cp == nil {
 		return Applied{}, nil
@@ -419,12 +423,26 @@ func (l *Ledger) ApplyBatch(ctx context.Context, b ObservationBatch) (Applied, e
 		return Applied{}, fmt.Errorf("store: begin tx: %w", err)
 	}
 	defer tx.Rollback()
+	if reconcileClaude {
+		var current bool
+		if err := tx.QueryRowContext(ctx, `SELECT `+rollupCurrentSQL).Scan(&current); err != nil {
+			return Applied{}, fmt.Errorf("store: check reconciliation rollup: %w", err)
+		}
+		if !current {
+			return Applied{}, fmt.Errorf("store: Claude reconciliation requires a current rollup; call EnsureRollup first")
+		}
+	}
 
 	var out Applied
 	inserted, skipErr, err := insertEventsTx(ctx, tx, events)
 	out.Events = inserted
 	if err != nil {
 		return Applied{}, err
+	}
+	if reconcileClaude {
+		if err := reconcileClaudeTx(ctx, tx, events); err != nil {
+			return Applied{}, err
+		}
 	}
 	actInserted, actSkipErr, err := insertActivityTx(ctx, tx, activity)
 	out.Activity = actInserted
@@ -602,6 +620,13 @@ func (s *Reader) Summarize(ctx context.Context, f Filter) (*Summary, error) {
 // field for field with the accelerated path. Unaligned starts use this path;
 // aligned starts can combine complete rollup buckets with exact ending events.
 func (s *Reader) summarizeLedger(ctx context.Context, f Filter) (*Summary, error) {
+	// Grouped measures and the distinct-session total must see the same
+	// committed observation, even while a collector writes the ledger.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("store: begin summary snapshot: %w", err)
+	}
+	defer tx.Rollback()
 	where, args := buildWhere(f)
 
 	groupExprs := make([]string, 0, len(f.GroupBy))
@@ -636,7 +661,7 @@ func (s *Reader) summarizeLedger(ctx context.Context, f Filter) (*Summary, error
 		sb.WriteString(strings.Join(groupExprs, ", "))
 	}
 
-	rows, err := s.db.QueryContext(ctx, sb.String(), args...)
+	rows, err := tx.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: summarize: %w", err)
 	}
@@ -691,7 +716,7 @@ func (s *Reader) summarizeLedger(ctx context.Context, f Filter) (*Summary, error
 		sum.Totals.ComputedCostEvents += b.ComputedCostEvents
 	}
 	if len(sum.Buckets) > 0 {
-		n, err := s.distinctSessions(ctx, where, args)
+		n, err := distinctSessions(ctx, tx, where, args)
 		if err != nil {
 			return nil, err
 		}
@@ -783,8 +808,8 @@ func (s *Reader) unpricedGroupsLedger(ctx context.Context, f Filter) ([]Unpriced
 }
 
 // distinctSessions counts distinct non-empty session ids over the filtered set.
-func (s *Reader) distinctSessions(ctx context.Context, where string, args []any) (int64, error) {
-	row := s.db.QueryRowContext(ctx, `
+func distinctSessions(ctx context.Context, q rowQuerier, where string, args []any) (int64, error) {
+	row := q.QueryRowContext(ctx, `
 		SELECT COUNT(DISTINCT CASE WHEN session_id <> '' THEN session_id END)
 		FROM usage_events`+where, args...)
 	var n int64

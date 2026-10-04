@@ -506,16 +506,22 @@ func TestSummarizeDistinctSessionCounts(t *testing.T) {
 	}
 }
 
-// TestOpenSetsSynchronousNormal: the DSN pragma must actually take effect — a
-// mistyped _pragma key would be silently ignored by the driver.
-func TestOpenSetsSynchronousNormal(t *testing.T) {
+// Every pooled connection must sync committed WAL transactions.
+func TestOpenSetsSynchronousFull(t *testing.T) {
 	st := openTemp(t)
 	var v int
 	if err := st.db.QueryRowContext(context.Background(), "PRAGMA synchronous").Scan(&v); err != nil {
 		t.Fatalf("pragma query: %v", err)
 	}
-	if v != 1 {
-		t.Fatalf("synchronous = %d, want 1 (NORMAL)", v)
+	if v != 2 {
+		t.Fatalf("synchronous = %d, want 2 (FULL)", v)
+	}
+	st.db.SetMaxIdleConns(0)
+	if err := st.db.QueryRowContext(context.Background(), "PRAGMA synchronous").Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	if v != 2 {
+		t.Fatalf("new connection synchronous = %d, want 2 (FULL)", v)
 	}
 }
 

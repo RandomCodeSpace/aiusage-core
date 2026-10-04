@@ -472,6 +472,11 @@ func (s *Reader) summarizeCurrentRollup(ctx context.Context, f Filter) (*Summary
 // back to the ledger: that is correct for both an empty current result and a
 // stale table, and avoids a separate status query on the hot path.
 func (s *Reader) summarizeRollup(ctx context.Context, f Filter, since, until time.Time, requireCurrent bool) (*Summary, bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, false, fmt.Errorf("store: begin rollup summary snapshot: %w", err)
+	}
+	defer tx.Rollback()
 	groupExprs := make([]string, 0, len(f.GroupBy))
 	for _, dim := range f.GroupBy {
 		expr, err := rollupGroupExpr(dim)
@@ -520,7 +525,7 @@ func (s *Reader) summarizeRollup(ctx context.Context, f Filter, since, until tim
 		sb.WriteString(strings.Join(groupExprs, ", "))
 	}
 
-	rows, err := s.db.QueryContext(ctx, sb.String(), args...)
+	rows, err := tx.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("store: summarize rollup: %w", err)
 	}
@@ -582,7 +587,7 @@ func (s *Reader) summarizeRollup(ctx context.Context, f Filter, since, until tim
 		out.Totals.ComputedCostEvents += b.ComputedCostEvents
 	}
 	if len(out.Buckets) > 0 {
-		n, err := s.distinctRollupSessions(ctx, from, where, args)
+		n, err := distinctRollupSessions(ctx, tx, from, where, args)
 		if err != nil {
 			return nil, false, err
 		}
@@ -615,9 +620,9 @@ func exactEndingRollupSource(f Filter) (string, []any) {
 	return from, args
 }
 
-func (s *Reader) distinctRollupSessions(ctx context.Context, from, where string, args []any) (int64, error) {
+func distinctRollupSessions(ctx context.Context, q rowQuerier, from, where string, args []any) (int64, error) {
 	var n int64
-	if err := s.db.QueryRowContext(ctx, `
+	if err := q.QueryRowContext(ctx, `
 		SELECT COUNT(DISTINCT CASE WHEN session_id <> '' THEN session_id END)
 		FROM `+from+where, args...).Scan(&n); err != nil {
 		return 0, fmt.Errorf("store: distinct rollup sessions: %w", err)
