@@ -231,6 +231,9 @@ func (a Adapter) CollectIncremental(ctx context.Context, src adapter.Source, cp 
 			return nil
 		}
 		fi, err := de.Info()
+		if de.Type()&os.ModeSymlink != 0 {
+			fi, err = os.Stat(path) // Checkpoint the target the parser reads.
+		}
 		if err != nil {
 			// A file we cannot stat cannot be gated; parse unconditionally and
 			// withhold the checkpoint so the next cycle re-examines it.

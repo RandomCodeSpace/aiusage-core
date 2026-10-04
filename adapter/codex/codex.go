@@ -189,6 +189,7 @@ func lineIsInteresting(raw []byte) bool {
 // after the offset IN FULL instead of as a delta. Model is the turn_context
 // carry-forward, which a tail read would otherwise miss.
 type ckptState struct {
+	Version   int    `json:"version,omitempty"`
 	Model     string `json:"model,omitempty"`
 	HavePrev  bool   `json:"havePrev,omitempty"`
 	Input     int64  `json:"input,omitempty"`
@@ -226,8 +227,9 @@ func (a Adapter) collectReader(ctx context.Context, src adapter.Source, cp *mode
 	mtimeNS := fi.ModTime().UnixNano()
 
 	var (
-		start int64
-		state ckptState
+		start        int64
+		replayBefore int64
+		state        ckptState
 	)
 	if cp != nil {
 		if cp.Size == size && cp.MTimeNS == mtimeNS {
@@ -243,6 +245,14 @@ func (a Adapter) collectReader(ctx context.Context, src adapter.Source, cp *mode
 				}
 			}
 		}
+	}
+	if start > 0 && state.Version < 1 {
+		// v0.1.0 did not retain totals from mixed last+total records. Rebuild
+		// the baseline from the old prefix without emitting its usage again:
+		// normalized counters are part of the dedup key, so replay could add
+		// a second event for history already stored with the old calculation.
+		replayBefore = start
+		start, state = 0, ckptState{}
 	}
 	if start > 0 {
 		if _, err := f.Seek(start, io.SeekStart); err != nil {
@@ -317,9 +327,13 @@ func (a Adapter) collectReader(ctx context.Context, src adapter.Source, cp *mode
 						diagnostics = errors.Join(diagnostics, fmt.Errorf("codex: %s offset %d: %w", src.Path, consumed, err))
 					} else if lineIsInteresting(raw) {
 						if ev, ok := parseUsageLine(line, usage, mtime, session, src.Path, &curModel, &prevTotal, &havePrev); ok {
-							events = append(events, ev)
+							if consumed >= replayBefore {
+								events = append(events, ev)
+							}
 						} else if a, ok := parseCallLine(line, mtime, session, src.Path, curModel); ok {
-							activity = append(activity, a)
+							if consumed >= replayBefore {
+								activity = append(activity, a)
+							}
 						}
 					}
 				}
@@ -346,7 +360,8 @@ func (a Adapter) collectReader(ctx context.Context, src adapter.Source, cp *mode
 		return adapter.Observation{Events: events, Activity: activity}, diagnostics
 	}
 	newState, err := json.Marshal(ckptState{
-		Model: curModel, HavePrev: havePrev,
+		Version: 1,
+		Model:   curModel, HavePrev: havePrev,
 		Input: prevTotal.input, Cached: prevTotal.cached, Output: prevTotal.output,
 		Reasoning: prevTotal.reasoning, Total: prevTotal.total,
 	})
@@ -486,9 +501,14 @@ func parseUsageLine(line map[string]json.RawMessage, usage usageObjects, mtime t
 		} else {
 			tok = cur
 		}
-		*prevTotal = cur
-		*havePrev = true
 		usable = true
+	}
+	// A record can carry both per-turn and cumulative usage. Even when the
+	// per-turn value wins, retain the cumulative baseline for a later record
+	// that omits last_token_usage, including after a checkpoint restart.
+	if cum := usage.total; cum != nil {
+		*prevTotal = readRaw(cum)
+		*havePrev = true
 	}
 	if !usable {
 		return model.UsageEvent{}, false
