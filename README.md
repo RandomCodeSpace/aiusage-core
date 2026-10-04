@@ -1,5 +1,10 @@
 # aiusage-core
 
+[![Core CI](https://github.com/RandomCodeSpace/aiusage-core/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/RandomCodeSpace/aiusage-core/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/RandomCodeSpace/aiusage-core)](https://github.com/RandomCodeSpace/aiusage-core/releases/latest)
+[![Go Reference](https://pkg.go.dev/badge/github.com/RandomCodeSpace/aiusage-core.svg)](https://pkg.go.dev/github.com/RandomCodeSpace/aiusage-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Go library for collecting local coding-agent usage, storing an incremental
 SQLite ledger, and calculating costs. Applications can import it directly;
 there is no aiusage executable to install or subprocess to manage.
@@ -18,7 +23,7 @@ cross-build coverage, and accounting guarantees, and the
 [security policy](SECURITY.md) for reporting and trust boundaries.
 
 ```sh
-go get github.com/RandomCodeSpace/aiusage-core
+go get github.com/RandomCodeSpace/aiusage-core@v0.1.1
 ```
 
 ## Embed a collector
@@ -87,6 +92,16 @@ Your application owns cancellation, scheduling, logging, and process lifetime.
 Run only one collector per ledger, including collectors in other processes.
 Concurrent collection of cumulative counters can count the same growth twice.
 
+For live Claude transcripts, `collect.WithClaudeReconciliation()` is an explicit
+opt-in on versions containing that option. A streamed message can report more
+tokens after its first observation. The default retains the first stored row;
+the option rereads Claude sources and reconciles monotonic growth against the
+ledger while preserving its identity and attribution. It requires a store with
+`ReconcileClaudeBatch`, such as `*store.Ledger`; custom stores without that
+capability return an error. Existing interfaces and defaults are unchanged.
+See the [reconciliation contract](COMPATIBILITY.md#claude-reconciliation) before
+enabling it. These additions are available starting with `v0.1.1`.
+
 ## Packages
 
 | Package | Purpose |
@@ -140,6 +155,14 @@ not free. `ComputedCostEvents` identifies costs estimated from a price table.
 Activity and turn-context rows are separate from usage; joining them must not
 multiply the original turn's tokens or cost.
 
+Automatic historical price sync uses `pricing.Engine.PriceStoredEvent` when
+available. Stored events lack the cache-write lifetime split. If five-minute
+and one-hour interpretations produce different costs or provenance, the row
+stays unpriced. Equal-rate and verified free prices remain eligible. Supply a
+pricer during collection to price fresh cache writes using their source data.
+Custom pricers keep their existing `PriceEvent` callback unless they implement
+the optional `PriceStoredEvent` method.
+
 `pricing.New` reads embedded tables and an optional local cache without a
 network request. To enable price metadata refresh, set both `DataDir` and
 `Refresh: true`. Collection then offers the engine a refresh each cycle.
@@ -163,6 +186,13 @@ The tests replay included fixtures and use temporary databases. The opt-in
 long-ledger performance test requires `AIUSAGE_PERF_DB` and is skipped by
 default. No production harness installation is needed.
 
-The MIT license is in [LICENSE](LICENSE). The bundled LiteLLM snapshot retains
+`bash scripts/check-api.sh` checks the working tree against the released
+`v0.1.0` API. It uses v1 compatibility rules and publishes nothing. See the
+[production readiness review](PRODUCTION_READINESS.md) for findings, fixes,
+verification limits and the remaining release gates.
+
+## License
+
+Released under the [MIT License](LICENSE). The bundled LiteLLM snapshot retains
 its source, license, and fetch metadata. The Models.dev snapshot retains its
 [MIT attribution](pricing/data/modelsdev_LICENSE).

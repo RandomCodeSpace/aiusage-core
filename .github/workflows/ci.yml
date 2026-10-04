@@ -56,6 +56,9 @@ jobs:
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
             GOOS="${target%/*}" GOARCH="${target#*/}" go build ./...
           done
+      - name: Preserve released public API
+        if: matrix.target == 'linux-amd64'
+        run: bash scripts/check-api.sh
 
   race:
     name: Race detector / linux-amd64
