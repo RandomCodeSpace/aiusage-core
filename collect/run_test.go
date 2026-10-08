@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/RandomCodeSpace/aiusage-core/adapter"
@@ -121,5 +122,369 @@ func TestRunClampsAPathologicalInterval(t *testing.T) {
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("Run returned %v on cancel, want nil", err)
+	}
+}
+
+// startScheduledRun is used inside a synctest bubble. Cleanup also verifies
+// Run's nil-on-cancellation contract, including tests that cancel it early.
+func startScheduledRun(t *testing.T, interval time.Duration, ad *fakeAdapter, opts ...Option) (*recorder, func()) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	var rec recorder
+	opts = append(opts, WithCycleCallback(rec.record))
+	go func() {
+		done <- Run(ctx, interval, adapter.NewRegistry(ad), newFakeStore(), adapter.DiscoverConfig{}, opts...)
+	}()
+	var once sync.Once
+	stop := func() {
+		once.Do(func() {
+			cancel()
+			if err := <-done; err != nil {
+				t.Errorf("Run returned %v on cancel, want nil", err)
+			}
+		})
+	}
+	t.Cleanup(stop)
+	synctest.Wait()
+	return &rec, stop
+}
+
+func emptyRunAdapter() *fakeAdapter {
+	return &fakeAdapter{
+		id:   model.ToolCodex,
+		emit: func(int) adapter.Observation { return adapter.Observation{} },
+	}
+}
+
+func TestRunPrequeuedTriggersCoalesceWithStartup(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 8)
+		for range cap(trigger) {
+			trigger <- struct{}{}
+		}
+		rec, _ := startScheduledRun(t, time.Hour, emptyRunAdapter(),
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 1 || len(trigger) != 0 {
+			t.Fatalf("passes = %d, pending requests = %d; want one startup pass and no requests", got, len(trigger))
+		}
+	})
+}
+
+func TestRunTriggerCoalescesAndRespectsMinInterval(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 8)
+		rec, _ := startScheduledRun(t, 15*time.Minute, emptyRunAdapter(),
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("startup passes = %d, want 1", got)
+		}
+		for range cap(trigger) {
+			trigger <- struct{}{}
+		}
+		synctest.Wait()
+		time.Sleep(time.Minute - time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("passes before minimum gap = %d, want 1", got)
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes at minimum gap = %d, want 2", got)
+		}
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes after burst drained = %d, want 2", got)
+		}
+		trigger <- struct{}{}
+		synctest.Wait()
+		if got := rec.passes(); got != 3 {
+			t.Fatalf("passes after eligible trigger = %d, want 3", got)
+		}
+	})
+}
+
+func TestRunCoalescesTriggersDuringPass(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 8)
+		release := make(chan struct{})
+		var starts []time.Time
+		ad := &fakeAdapter{
+			id: model.ToolCodex,
+			emit: func(call int) adapter.Observation {
+				starts = append(starts, time.Now())
+				if call == 0 {
+					<-release
+				}
+				return adapter.Observation{}
+			},
+		}
+		rec, _ := startScheduledRun(t, time.Hour, ad,
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		for range cap(trigger) {
+			trigger <- struct{}{}
+		}
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+		if len(starts) != 1 || rec.passes() != 0 {
+			t.Fatal("a second pass started while the startup pass was blocked")
+		}
+		close(release)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes after releasing startup = %d, want 2", got)
+		}
+		if gap := starts[1].Sub(starts[0]); gap != 2*time.Minute {
+			t.Fatalf("pass start gap = %s, want 2m", gap)
+		}
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes after buffered burst = %d, want 2", got)
+		}
+	})
+}
+
+func TestRunMinimumSpacingIsBetweenPassStarts(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 1)
+		ad := &fakeAdapter{
+			id: model.ToolCodex,
+			emit: func(call int) adapter.Observation {
+				if call == 0 {
+					time.Sleep(40 * time.Second)
+				}
+				return adapter.Observation{}
+			},
+		}
+		rec, _ := startScheduledRun(t, time.Hour, ad,
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		time.Sleep(40 * time.Second)
+		synctest.Wait()
+		trigger <- struct{}{}
+		time.Sleep(20*time.Second - time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("passes before startup start + 1m = %d, want 1", got)
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes at startup start + 1m = %d, want 2", got)
+		}
+	})
+}
+
+func TestRunBackgroundContinuesAfterTriggers(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 1)
+		rec, _ := startScheduledRun(t, 5*time.Minute, emptyRunAdapter(),
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		trigger <- struct{}{}
+		time.Sleep(time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes after trigger = %d, want 2", got)
+		}
+		time.Sleep(4 * time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 3 {
+			t.Fatalf("passes at original background tick = %d, want 3", got)
+		}
+		time.Sleep(5 * time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 4 {
+			t.Fatalf("passes at next background tick = %d, want 4", got)
+		}
+	})
+}
+
+func TestRunMinimumIntervalAlsoSpacesTickerPasses(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		rec, _ := startScheduledRun(t, time.Second, emptyRunAdapter(),
+			WithTrigger(nil), WithMinInterval(time.Minute))
+		time.Sleep(time.Minute - time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("ticker passes before minimum gap = %d, want 1", got)
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("ticker passes at minimum gap = %d, want 2", got)
+		}
+		time.Sleep(time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 3 {
+			t.Fatalf("ticker passes at next minimum gap = %d, want 3", got)
+		}
+	})
+}
+
+func TestRunClosedTriggerDoesNotCollect(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{})
+		close(trigger)
+		rec, _ := startScheduledRun(t, 10*time.Second, emptyRunAdapter(), WithTrigger(trigger))
+		time.Sleep(9 * time.Second)
+		synctest.Wait()
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("passes from closed trigger = %d, want 1", got)
+		}
+		time.Sleep(time.Second)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("background passes after trigger closed = %d, want 2", got)
+		}
+	})
+}
+
+func TestRunTriggerClosurePreservesPendingPass(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 1)
+		rec, _ := startScheduledRun(t, time.Hour, emptyRunAdapter(),
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		trigger <- struct{}{}
+		synctest.Wait()
+		close(trigger)
+		time.Sleep(time.Minute)
+		synctest.Wait()
+		if got := rec.passes(); got != 2 {
+			t.Fatalf("passes after pending trigger closed = %d, want 2", got)
+		}
+	})
+}
+
+func TestRunCancelWhileWaitingForMinimumGap(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 1)
+		rec, stop := startScheduledRun(t, time.Hour, emptyRunAdapter(),
+			WithTrigger(trigger), WithMinInterval(time.Minute))
+		trigger <- struct{}{}
+		synctest.Wait()
+		time.Sleep(30 * time.Second)
+		stop()
+		if got := rec.passes(); got != 1 {
+			t.Fatalf("passes after cancelling pending trigger = %d, want 1", got)
+		}
+	})
+}
+
+func TestRunCancelDuringPass(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		trigger := make(chan struct{}, 1)
+		ad := &fakeAdapter{
+			id: model.ToolCodex,
+			emit: func(int) adapter.Observation {
+				<-ctx.Done()
+				return adapter.Observation{}
+			},
+		}
+		var rec recorder
+		done := make(chan error, 1)
+		go func() {
+			done <- Run(ctx, time.Hour, adapter.NewRegistry(ad), newFakeStore(), adapter.DiscoverConfig{},
+				WithTrigger(trigger), WithCycleCallback(rec.record))
+		}()
+		synctest.Wait()
+		trigger <- struct{}{}
+		cancel()
+		if err := <-done; err != nil {
+			t.Fatalf("Run returned %v on cancellation during a pass, want nil", err)
+		}
+		if rec.passes() != 1 || !rec.stats[0].Canceled || rec.errs[0] != context.Canceled {
+			t.Fatalf("cancelled callback = %+v, %v; want one cancelled pass", rec.stats, rec.errs)
+		}
+	})
+}
+
+func TestRunContinuousTriggersAllowCollectionAndCancellation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		trigger := make(chan struct{}, 64)
+		release := make(chan struct{})
+		collected := make(chan struct{})
+		ad := &fakeAdapter{
+			id: model.ToolCodex,
+			emit: func(call int) adapter.Observation {
+				if call == 0 {
+					<-release
+				} else if call == 1 {
+					close(collected)
+				}
+				return adapter.Observation{}
+			},
+		}
+		_, stop := startScheduledRun(t, time.Hour, ad, WithTrigger(trigger))
+		time.Sleep(2 * time.Second)
+		stopProducer := make(chan struct{})
+		defer close(stopProducer)
+		started := make(chan struct{})
+		go func() {
+			trigger <- struct{}{}
+			close(started)
+			for {
+				select {
+				case trigger <- struct{}{}:
+				case <-stopProducer:
+					return
+				}
+			}
+		}()
+		<-started
+		close(release)
+		<-collected
+		stop()
+	})
+}
+
+func TestRunTriggerMinimumIntervalFloor(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts []Option
+	}{
+		{"default", nil},
+		{"zero", []Option{WithMinInterval(0)}},
+		{"negative", []Option{WithMinInterval(-time.Second)}},
+		{"subsecond", []Option{WithMinInterval(time.Millisecond)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				trigger := make(chan struct{}, 1)
+				opts := append(tc.opts, WithTrigger(trigger))
+				rec, _ := startScheduledRun(t, time.Hour, emptyRunAdapter(), opts...)
+				trigger <- struct{}{}
+				time.Sleep(time.Second - time.Nanosecond)
+				synctest.Wait()
+				if got := rec.passes(); got != 1 {
+					t.Fatalf("passes before one-second floor = %d, want 1", got)
+				}
+				time.Sleep(time.Nanosecond)
+				synctest.Wait()
+				if got := rec.passes(); got != 2 {
+					t.Fatalf("passes at one-second floor = %d, want 2", got)
+				}
+			})
+		})
+	}
+}
+
+func TestRunOnceIgnoresSchedulingOptions(t *testing.T) {
+	trigger := make(chan struct{}, 1)
+	trigger <- struct{}{}
+	called := false
+	stats, err := RunOnce(t.Context(), adapter.NewRegistry(emptyRunAdapter()), newFakeStore(), adapter.DiscoverConfig{},
+		WithTrigger(trigger), WithMinInterval(time.Hour),
+		WithCycleCallback(func(CycleStats, error) { called = true }))
+	if err != nil || stats.Sources != 1 {
+		t.Fatalf("RunOnce = %+v, %v; want one clean source", stats, err)
+	}
+	if called || len(trigger) != 1 {
+		t.Fatal("RunOnce consumed a trigger or called the cycle callback")
 	}
 }

@@ -95,6 +95,8 @@ type cycleOptions struct {
 	noRaw           bool
 	onCycle         func(CycleStats, error)
 	reconcileClaude bool
+	trigger         <-chan struct{}
+	minInterval     time.Duration
 }
 
 // WithPricer stamps a cost on every new event from the price table in effect at
@@ -133,6 +135,27 @@ type claudeReconciler interface {
 // slow collector. Keep it to logging or a metric.
 func WithCycleCallback(fn func(CycleStats, error)) Option {
 	return func(o *cycleOptions) { o.onCycle = fn }
+}
+
+// WithTrigger lets Run collect after a request on ch, in addition to its
+// background ticker. Requests pending before a pass are folded into that pass;
+// requests buffered during a pass schedule at most one later pass. A nil or
+// closed channel disables triggers. RunOnce ignores this option.
+//
+// A channel buffered to one, with nonblocking sends, lets callers request a
+// pass without waiting for an active collection to finish. The caller owns ch
+// and may close it; Run only receives from it.
+func WithTrigger(ch <-chan struct{}) Option {
+	return func(o *cycleOptions) { o.trigger = ch }
+}
+
+// WithMinInterval sets the minimum gap between the starts of Run's passes,
+// including triggered and ticker passes. The startup pass remains immediate.
+// The default and the floor for smaller values are one second. Collection and
+// WithCycleCallback remain serial; their duration counts toward the gap.
+// RunOnce ignores this option.
+func WithMinInterval(interval time.Duration) Option {
+	return func(o *cycleOptions) { o.minInterval = interval }
 }
 
 // WithoutRaw drops every adapter's raw audit payload before it reaches the

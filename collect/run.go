@@ -7,16 +7,18 @@ import (
 	"github.com/RandomCodeSpace/aiusage-core/adapter"
 )
 
-// minInterval is the last-resort floor under Run's ticker: a caller that passes
-// zero or a negative interval gets one pass per second, not a tight loop that
+// minInterval is the last-resort floor under Run's ticker and pass spacing:
+// zero or negative intervals get one pass per second, not a tight loop that
 // re-reads every transcript on this machine as fast as the disk allows. It is a
 // guard, not a policy - a caller with an opinion about cadence states it, and
 // this CLI's own config clamps to [60,1800]s long before the value reaches here.
 const minInterval = time.Second
 
-// Run collects on a ticker until ctx is cancelled: one pass immediately, then
-// one every interval. It is the whole of the long-running half of this package
-// (issue #72, decision 3) - a loop over RunOnce and nothing else.
+// Run collects until ctx is cancelled: one pass immediately, then on its
+// background ticker or a WithTrigger request. Passes run serially and their
+// starts are separated by WithMinInterval, which defaults to one second.
+// Pending requests coalesce into one pass. It is the whole of the long-running
+// half of this package (issue #72, decision 3), a loop over RunOnce.
 //
 // WHAT IT DELIBERATELY DOES NOT DO: take a pidfile lock, write a pid, record a
 // build identity, watch its own executable, or install a signal handler. Those
@@ -46,8 +48,31 @@ func Run(ctx context.Context, interval time.Duration, reg *adapter.Registry, st 
 	for _, fn := range opts {
 		fn(&o)
 	}
+	gap := o.minInterval
+	if gap < minInterval {
+		gap = minInterval
+	}
+	trigger := o.trigger
+	// Fold a buffered burst into the next pass. Bound the drain so a
+	// continuous producer cannot postpone collection or cancellation.
+	drainTrigger := func() {
+		for queued := len(trigger); queued > 0; queued-- {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-trigger:
+				if !ok {
+					trigger = nil
+				}
+			default:
+				return
+			}
+		}
+	}
 
+	var lastStart time.Time
 	pass := func() {
+		lastStart = time.Now()
 		stats, err := RunOnce(ctx, reg, st, dc, opts...)
 		if o.onCycle != nil {
 			o.onCycle(stats, err)
@@ -57,6 +82,7 @@ func Run(ctx context.Context, interval time.Duration, reg *adapter.Registry, st 
 	// Immediate first pass, then on the ticker. A collector that waited out a
 	// full interval before its first read would report nothing for that long
 	// after a restart, and a restart is exactly when a gap needs filling.
+	drainTrigger()
 	pass()
 
 	ticker := time.NewTicker(interval)
@@ -65,8 +91,41 @@ func Run(ctx context.Context, interval time.Duration, reg *adapter.Registry, st 
 		select {
 		case <-ctx.Done():
 			return nil
+		case _, ok := <-trigger:
+			if !ok {
+				trigger = nil
+				continue
+			}
 		case <-ticker.C:
-			pass()
 		}
+
+		if delay := time.Until(lastStart.Add(gap)); delay > 0 {
+			timer := time.NewTimer(delay)
+		waiting:
+			for {
+				select {
+				case <-ctx.Done():
+					timer.Stop()
+					return nil
+				case _, ok := <-trigger:
+					if !ok {
+						trigger = nil
+					}
+				case <-ticker.C:
+				case <-timer.C:
+					break waiting
+				}
+			}
+		}
+
+		drainTrigger()
+		select {
+		case <-ticker.C:
+		default:
+		}
+		if ctx.Err() != nil {
+			return nil
+		}
+		pass()
 	}
 }
