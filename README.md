@@ -23,7 +23,7 @@ cross-build coverage, and accounting guarantees, and the
 [security policy](SECURITY.md) for reporting and trust boundaries.
 
 ```sh
-go get github.com/RandomCodeSpace/aiusage-core@v0.1.1
+go get github.com/RandomCodeSpace/aiusage-core@v0.1.2
 ```
 
 ## Embed a collector
@@ -88,9 +88,37 @@ adapter documents its layout and supported environment variables.
 
 `collect.Run` performs an immediate pass, then repeats at the supplied interval
 until its context is canceled. `collect.WithCycleCallback` reports every pass.
+`collect.WithTrigger(requests)` also accepts on-demand requests through a
+`<-chan struct{}`. Use a channel buffered to one and nonblocking sends to
+coalesce requests without blocking a usage view:
+
+```go
+requests := make(chan struct{}, 1)
+// Pass collect.WithTrigger(requests) to collect.Run.
+select {
+case requests <- struct{}{}:
+default:
+}
+```
+
+`collect.WithMinInterval(time.Minute)` limits both triggered and background
+passes to at most one start per minute. Starts are spaced at least one second
+by default; startup collection remains immediate. Requests made during a pass
+schedule at most one later pass. Closing the channel disables triggers, and
+`RunOnce` ignores both scheduling options.
+These scheduling options are available starting with `v0.1.2`.
+
 Your application owns cancellation, scheduling, logging, and process lifetime.
 Run only one collector per ledger, including collectors in other processes.
 Concurrent collection of cumulative counters can count the same growth twice.
+
+Reuse the adapter registry across passes to keep the per-file parse cache from
+`claudecode.New()` warm. Changed passes still deduplicate candidates across the
+whole root. The cache is memory-only; after a restart, the next changed or full
+pass reads all transcripts.
+Claude workflow journals are excluded because they carry no usage. OpenCode
+checkpoints record database and WAL file stamps, so unchanged databases are
+skipped without opening SQLite.
 
 For live Claude transcripts, `collect.WithClaudeReconciliation()` is an explicit
 opt-in on versions containing that option. A streamed message can report more

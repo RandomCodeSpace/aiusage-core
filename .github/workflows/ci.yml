@@ -58,7 +58,7 @@ jobs:
           done
       - name: Preserve released public API
         if: matrix.target == 'linux-amd64'
-        run: bash scripts/check-api.sh
+        run: bash scripts/check-api.sh v0.1.1 v0.1.2
 
   race:
     name: Race detector / linux-amd64
