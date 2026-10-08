@@ -23,7 +23,7 @@ func TestOversizedReadReportsPathAndReplays(t *testing.T) {
 	after := regressionLine("after", `"timestamp":"2026-09-01T00:00:01Z",`, "")
 	writeFixture(t, root, "seg", "session", []string{before, strings.Repeat("x", 9<<20), after})
 	src := adapter.Source{Tool: model.ToolClaudeCode, Path: root}
-	a := Adapter{}
+	a := New().(Adapter)
 	partial, err := a.CollectIncremental(context.Background(), src, nil)
 	path := filepath.Join(root, "projects", "seg", "session.jsonl")
 	if err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "token too long") || partial.Checkpoint != nil || len(partial.Events) != 1 || partial.Events[0].MessageID != "before" {

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/RandomCodeSpace/aiusage-core/adapter"
@@ -67,10 +68,16 @@ const syntheticModel = "<synthetic>"
 const ConfigDirEnv = "CLAUDE_CONFIG_DIR"
 
 // Adapter reads Claude Code usage transcripts.
-type Adapter struct{}
+// The zero value is usable; New also retains parsed files between passes.
+type Adapter struct {
+	cache *parseCache
+}
 
-// New returns a Claude Code adapter.
-func New() adapter.Adapter { return Adapter{} }
+// New returns a Claude Code adapter with an in-memory per-file parse cache.
+// Keep the adapter or its registry across passes to reuse unchanged files.
+func New() adapter.Adapter {
+	return Adapter{cache: &parseCache{roots: make(map[string]map[string]parsedFile)}}
+}
 
 // ID returns the stable tool identifier.
 func (Adapter) ID() string { return model.ToolClaudeCode }
@@ -192,21 +199,47 @@ type fileStamp struct {
 	MTimeNS int64 `json:"mtime"`
 }
 
-// Collect walks <root>/projects/**/*.jsonl, parses every usage line, applies
-// in-cycle dedup, and returns the surviving events with any per-file errors.
+type parseCache struct {
+	mu    sync.Mutex
+	roots map[string]map[string]parsedFile
+}
+
+// parsedFile retains candidates before deduplication, so cross-file collisions
+// and the unions of activity and attribution still see every transcript record.
+type parsedFile struct {
+	stamp      fileStamp
+	candidates []candidate
+	hooks      []model.ActivityEvent
+	err        error
+}
+
+func (p *parsedFile) add(c candidate)                  { p.candidates = append(p.candidates, c) }
+func (p *parsedFile) addHooks(h []model.ActivityEvent) { p.hooks = append(p.hooks, h...) }
+
+// Collect returns a full root observation, reusing cached parses when available
+// and applying in-cycle dedup, with any per-file errors.
 // A bad transcript does not discard observations from readable files.
 func (a Adapter) Collect(ctx context.Context, src adapter.Source) (adapter.Observation, error) {
 	return a.CollectIncremental(ctx, src, nil)
 }
 
-// CollectIncremental gates the whole root on a per-file size+mtime manifest:
-// when no transcript under projects/ changed, the walk is stats only and no
-// file is opened. Any change re-parses EVERY file — the deduper's sidechain
-// consolidation spans all files of a root in one pass, so per-file tail reads
-// would break cross-file dedup. Correctness of the full re-parse is carried by
-// the persisted dedup keys (INSERT OR IGNORE collapses re-derived events).
+// CollectIncremental skips unchanged roots using a size+mtime manifest. On a
+// changed pass, adapters created by New parse only changed files and deduplicate
+// fresh and cached candidates across the whole root. A cold cache reads all
+// files. Workflow journals under subagents/workflows carry no usage and are
+// excluded. Persisted event identities keep replayed observations idempotent.
 func (a Adapter) CollectIncremental(ctx context.Context, src adapter.Source, cp *model.SourceCheckpoint) (adapter.Observation, error) {
 	projDir := filepath.Join(src.Path, "projects")
+	var cache map[string]parsedFile
+	if a.cache != nil {
+		a.cache.mu.Lock()
+		defer a.cache.mu.Unlock()
+		cache = a.cache.roots[src.Path]
+		if cache == nil {
+			cache = make(map[string]parsedFile)
+			a.cache.roots[src.Path] = cache
+		}
+	}
 
 	type entry struct {
 		path    string
@@ -226,6 +259,12 @@ func (a Adapter) CollectIncremental(ctx context.Context, src adapter.Source, cp 
 		}
 		if de.IsDir() || !strings.HasSuffix(de.Name(), ".jsonl") {
 			return nil
+		}
+		if de.Name() == "journal.jsonl" {
+			rel, _ := filepath.Rel(projDir, path)
+			if strings.Contains(filepath.ToSlash(rel), "/subagents/workflows/") {
+				return nil
+			}
 		}
 		if !adapter.WalkEntryIsFile(de, path) {
 			return nil
@@ -247,6 +286,11 @@ func (a Adapter) CollectIncremental(ctx context.Context, src adapter.Source, cp 
 	if walkErr != nil {
 		return adapter.Observation{}, walkErr // only ctx cancellation escapes the walk
 	}
+	for path := range cache {
+		if _, present := manifest[path]; !present {
+			delete(cache, path)
+		}
+	}
 
 	if cp != nil && !statErr && manifestUnchanged(cp.State, manifest) {
 		return adapter.Observation{}, nil // nothing changed: no parse, keep stored checkpoint
@@ -263,11 +307,30 @@ func (a Adapter) CollectIncremental(ctx context.Context, src adapter.Source, cp 
 				TurnContexts: d.turnContexts(),
 			}, ctx.Err()
 		}
-		readComplete, err := parseFile(e.path, e.segment, d)
+		stamp, stamped := manifest[e.path]
+		parsed, cached := cache[e.path]
+		readComplete := true
+		if !cached || !stamped || parsed.stamp != stamp {
+			parsed = parsedFile{stamp: stamp}
+			readComplete, parsed.err = parseFile(e.path, e.segment, &parsed)
+			if cache != nil {
+				// Never reuse a partial read or bytes changed during parsing.
+				info, err := os.Stat(e.path)
+				if readComplete && stamped && err == nil && stamp == (fileStamp{Size: info.Size(), MTimeNS: info.ModTime().UnixNano()}) {
+					cache[e.path] = parsed
+				} else {
+					delete(cache, e.path)
+				}
+			}
+		}
+		for _, c := range parsed.candidates {
+			d.add(c)
+		}
+		d.addHooks(parsed.hooks)
 		// A partial read must not land in the manifest: the unchanged-file
 		// gate would skip its unread content on the next poll.
 		complete = complete && readComplete
-		parseErr = errors.Join(parseErr, err)
+		parseErr = errors.Join(parseErr, parsed.err)
 	}
 
 	obs := adapter.Observation{
@@ -328,7 +391,10 @@ func projectSegment(projDir, file string) string {
 // into the deduper. The bool reports whether the read completed; incomplete
 // reads must not checkpoint the root. Complete malformed usage records are
 // reported while retaining the surrounding valid rows.
-func parseFile(path, segment string, d *deduper) (bool, error) {
+func parseFile(path, segment string, d interface {
+	add(candidate)
+	addHooks([]model.ActivityEvent)
+}) (bool, error) {
 	f, err := os.Open(path) // O_RDONLY
 	if err != nil {
 		return false, fmt.Errorf("claude-code: open %s: %w", path, err)

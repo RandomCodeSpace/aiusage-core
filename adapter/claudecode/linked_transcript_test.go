@@ -23,7 +23,7 @@ func TestLinkedTranscriptGrowth(t *testing.T) {
 	if err := os.Symlink(target, filepath.Join(dir, "session.jsonl")); err != nil {
 		t.Fatal(err)
 	}
-	a := Adapter{}
+	a := New().(Adapter)
 	src := adapter.Source{Path: root}
 	one, err := a.Collect(context.Background(), src)
 	if err != nil {
