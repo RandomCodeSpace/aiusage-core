@@ -216,16 +216,74 @@ func kindOf(src adapter.Source) string {
 var errInvalidTimestamp = errors.New("missing or invalid creation timestamp")
 var errInvalidMessage = errors.New("invalid message JSON")
 
-// dbState is private retry state for the mutable message schema. Missing state
-// replays historical rows once, using the same persisted event identities.
+// dbState is private retry and file state. Missing or legacy state replays a
+// modern schema once, using the same persisted event identities.
 type dbState struct {
-	Version int     `json:"version"`
-	Pending []int64 `json:"pending,omitempty"`
+	Version int      `json:"version"`
+	Pending []int64  `json:"pending,omitempty"`
+	Legacy  bool     `json:"legacy,omitempty"`
+	Files   *dbFiles `json:"files,omitempty"`
+}
+
+type fileStamp struct {
+	Present bool  `json:"present"`
+	Size    int64 `json:"size"`
+	MTime   int64 `json:"mtime"`
+}
+
+type dbFiles struct {
+	DB  fileStamp `json:"db"`
+	WAL fileStamp `json:"wal"`
+}
+
+func statDBFiles(path string) (dbFiles, error) {
+	var files dbFiles
+	for _, file := range []struct {
+		path  string
+		stamp *fileStamp
+	}{{path, &files.DB}, {path + "-wal", &files.WAL}} {
+		info, err := os.Stat(file.path)
+		if errors.Is(err, fs.ErrNotExist) && file.stamp == &files.WAL {
+			continue
+		}
+		if err != nil {
+			return dbFiles{}, err
+		}
+		if !info.Mode().IsRegular() {
+			return dbFiles{}, fmt.Errorf("not a regular file: %s", file.path)
+		}
+		*file.stamp = fileStamp{Present: true, Size: info.Size(), MTime: info.ModTime().UnixNano()}
+	}
+	return files, nil
+}
+
+func validDBState(state dbState, watermark int64) bool {
+	if state.Version != 1 || watermark < 0 || (state.Legacy && len(state.Pending) != 0) {
+		return false
+	}
+	for i, rowid := range state.Pending {
+		if rowid <= 0 || rowid > watermark || (i > 0 && rowid <= state.Pending[i-1]) {
+			return false
+		}
+	}
+	return true
 }
 
 // collectDB observes message completion and parts in one read-only snapshot.
 // Never use immutable=1: the producer's latest messages can live in its WAL.
 func collectDB(ctx context.Context, src adapter.Source, cp *model.SourceCheckpoint) (adapter.Observation, error) {
+	if err := ctx.Err(); err != nil {
+		return adapter.Observation{}, err
+	}
+	before, err := statDBFiles(src.Path)
+	if err != nil {
+		return adapter.Observation{}, fmt.Errorf("opencode: stat db %s: %w", src.Path, err)
+	}
+	var state dbState
+	stateValid := cp != nil && cp.State != "" && json.Unmarshal([]byte(cp.State), &state) == nil && validDBState(state, cp.Watermark)
+	if stateValid && cp.Tool == model.ToolOpenCode && cp.SourcePath == src.Path && state.Files != nil && *state.Files == before {
+		return adapter.Observation{}, nil
+	}
 	absolute, err := filepath.Abs(src.Path)
 	if err != nil {
 		return adapter.Observation{}, err
@@ -260,23 +318,20 @@ func collectDB(ctx context.Context, src adapter.Source, cp *model.SourceCheckpoi
 	}
 	modern := anchors == 2
 	watermark := int64(0)
-	var state dbState
 	if cp != nil {
 		watermark = cp.Watermark
 	}
 	if modern {
-		if cp == nil || cp.State == "" {
+		if cp == nil || cp.State == "" || (stateValid && state.Legacy) {
 			watermark = 0
+			state = dbState{}
 		} else {
-			if err := json.Unmarshal([]byte(cp.State), &state); err != nil || state.Version != 1 || watermark < 0 {
+			if !stateValid {
 				return adapter.Observation{}, fmt.Errorf("%w: opencode invalid checkpoint state for %s", adapter.ErrSourceFormat, src.Path)
 			}
-			for i, rowid := range state.Pending {
-				if rowid <= 0 || rowid > watermark || (i > 0 && rowid <= state.Pending[i-1]) {
-					return adapter.Observation{}, fmt.Errorf("%w: opencode invalid pending rowids for %s", adapter.ErrSourceFormat, src.Path)
-				}
-			}
 		}
+	} else {
+		state = dbState{Legacy: true}
 	}
 	pendingJSON, _ := json.Marshal(state.Pending)
 	payload := "data"
@@ -365,13 +420,20 @@ func collectDB(ctx context.Context, src adapter.Source, cp *model.SourceCheckpoi
 	if err := tx.Commit(); err != nil {
 		return obs, errors.Join(diagnostics, fmt.Errorf("opencode: snapshot %s: %w", src.Path, err))
 	}
-	next := &model.SourceCheckpoint{Tool: model.ToolOpenCode, SourcePath: src.Path, Watermark: consumed}
-	if modern {
-		state.Version = 1
-		state.Pending = pending
-		encoded, _ := json.Marshal(state)
-		next.State = string(encoded)
+	if err := db.Close(); err != nil {
+		return obs, errors.Join(diagnostics, fmt.Errorf("opencode: close db %s: %w", src.Path, err))
 	}
+	next := &model.SourceCheckpoint{Tool: model.ToolOpenCode, SourcePath: src.Path, Watermark: consumed}
+	state.Version = 1
+	state.Pending = pending
+	state.Files = nil
+	// A changed source may contain writes outside our snapshot. Leave the file
+	// gate unset so the next pass observes them, including summary-only updates.
+	if after, err := statDBFiles(src.Path); diagnostics == nil && err == nil && before == after {
+		state.Files = &after
+	}
+	encoded, _ := json.Marshal(state)
+	next.State = string(encoded)
 	if cp == nil || cp.Watermark != next.Watermark || cp.State != next.State {
 		obs.Checkpoint = next
 	}

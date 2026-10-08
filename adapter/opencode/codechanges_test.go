@@ -3,6 +3,7 @@ package opencode
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -55,13 +56,19 @@ func TestCodeChangesMutableSnapshots(t *testing.T) {
 				Tool: model.ToolOpenCode, ChangeID: "user", SessionID: "session", Project: "/recorded/project",
 				Known: tt.known, LinesAdded: tt.added, LinesRemoved: tt.removed, UpdatedAt: time.UnixMilli(updated).UTC(),
 			}
-			if len(obs.Events) != 0 || len(obs.Activity) != 0 || obs.Checkpoint != nil || !reflect.DeepEqual(obs.CodeChanges, []model.CodeChange{want}) {
+			wantPending(t, obs.Checkpoint, 2)
+			if len(obs.Events) != 0 || len(obs.Activity) != 0 || !reflect.DeepEqual(obs.CodeChanges, []model.CodeChange{want}) {
 				t.Fatalf("updated observation = %+v, want code change %+v without usage replay", obs, want)
 			}
 			again := incremental(t, src, first.Checkpoint)
 			if !reflect.DeepEqual(obs, again) {
 				t.Fatalf("repeat changed snapshot: %+v then %+v", obs, again)
 			}
+			idle := incremental(t, src, obs.Checkpoint)
+			if len(idle.Events) != 0 || len(idle.Activity) != 0 || len(idle.CodeChanges) != 0 || idle.Checkpoint != nil {
+				t.Fatalf("unchanged summary replayed: %+v", idle)
+			}
+			first.Checkpoint = obs.Checkpoint
 			afterDB, err := os.ReadFile(src.Path)
 			if err != nil {
 				t.Fatal(err)
@@ -142,6 +149,34 @@ func TestCodeChangesInvalidCountsKeepUsageCheckpoint(t *testing.T) {
 	change := repaired.CodeChanges[9]
 	if change.ChangeID != "negative" || !change.Known || change.LinesAdded != 1 || change.LinesRemoved != 2 {
 		t.Fatalf("repaired snapshot = %+v", change)
+	}
+}
+
+func TestCodeChangeDiagnosticsDisableFileGate(t *testing.T) {
+	db, src := modernDB(t)
+	execSource(t, db, `CREATE TABLE session(id TEXT PRIMARY KEY, directory TEXT NOT NULL)`)
+	execSource(t, db, `INSERT INTO session VALUES('s','/project')`)
+	addModernMessage(t, db, 1, "user", "s", `{"role":"user","summary":{"diffs":[{"additions":1,"deletions":2}]}}`)
+	first := incremental(t, src, nil)
+	execSource(t, db, `UPDATE message SET data='{"role":"user","summary":{"diffs":[{"additions":-1,"deletions":2}]}}'`)
+	bad, err := (Adapter{}).CollectIncremental(context.Background(), src, first.Checkpoint)
+	if err == nil {
+		t.Fatal("invalid count snapshot lost diagnostic")
+	}
+	wantPending(t, bad.Checkpoint, 1)
+	var state dbState
+	if err := json.Unmarshal([]byte(bad.Checkpoint.State), &state); err != nil || state.Files != nil {
+		t.Fatalf("diagnostic retained safe file gate: %+v, %v", state, err)
+	}
+	// Persisting the usage cursor must not suppress a retry of count diagnostics.
+	again, err := (Adapter{}).CollectIncremental(context.Background(), src, bad.Checkpoint)
+	if err == nil || len(again.CodeChanges) != 1 || again.Checkpoint != nil {
+		t.Fatalf("diagnostic retry skipped: %+v, %v", again, err)
+	}
+	execSource(t, db, `UPDATE message SET data='{"role":"user","summary":{"diffs":[{"additions":3,"deletions":4}]}}'`)
+	repaired := incremental(t, src, bad.Checkpoint)
+	if len(repaired.CodeChanges) != 1 || !repaired.CodeChanges[0].Known || repaired.CodeChanges[0].LinesAdded != 3 || repaired.Checkpoint == nil {
+		t.Fatalf("count repair skipped: %+v", repaired)
 	}
 }
 

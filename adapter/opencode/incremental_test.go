@@ -101,9 +101,21 @@ func TestIncrementalInPlaceCompletion(t *testing.T) {
 				t.Fatalf("unfinished message emitted %+v", first)
 			}
 			applyObservation(t, ledger, first, 0, 0)
+			idlePending := incremental(t, src, first.Checkpoint)
+			if len(idlePending.Events) != 0 || len(idlePending.Activity) != 0 || idlePending.Checkpoint != nil {
+				t.Fatalf("unchanged pending message replayed: %+v", idlePending)
+			}
+			before, err := statDBFiles(src.Path)
+			if err != nil || !before.WAL.Present {
+				t.Fatalf("WAL fixture: %+v, %v", before, err)
+			}
 			addModernPart(t, db, "late1", "m1")
 			addModernPart(t, db, "late2", "m1")
 			execSource(t, db, `UPDATE message SET data=?, time_updated=time_updated+1 WHERE id='m1'`, modernData("assistant", 1730000000010, 21800))
+			after, err := statDBFiles(src.Path)
+			if err != nil || before.DB != after.DB || before.WAL == after.WAL {
+				t.Fatalf("completion must change only the WAL: %+v -> %+v, %v", before, after, err)
+			}
 			second := incremental(t, src, first.Checkpoint)
 			wantPending(t, second.Checkpoint, 1)
 			if len(second.Events) != 1 || second.Events[0].TotalTokens != 21800 || second.Events[0].DedupKey != "opencode|m1" || len(second.Activity) != 3 {
